@@ -1,0 +1,1 @@
+python serialcontrol.py --port COM8
