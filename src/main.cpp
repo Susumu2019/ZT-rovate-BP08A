@@ -362,28 +362,26 @@ void loop() {
 		imu6886_ahrs.update();
 	}
 	
+	// シリアルコマンド受信処理（アプリloopより前に実行！）
+	if (Settings::getInstance().isSerialEnabled()) {
+		bool updated = false;
+		if (Settings::getInstance().getSerialMode() == Settings::SERIAL_TEXT) {
+			updated = serialSender.processTextCommand(g_servoPos, g_servoOff);
+		} else if (Settings::getInstance().getSerialMode() == Settings::SERIAL_BINARY) {
+			updated = serialSender.processBinaryCommand(g_servoPos, g_servoOff);
+		}
+		if (updated) {
+			applyServoOutputs();
+		}
+	}
+
 	// ボタンB（物理ボタン）が離されたらホーム画面を表示
 	if (M5.BtnB.wasReleased()) {
 		appManager.showHomeScreen();
 	}
-	
+
 	// 現在のアプリのメインロジック実行
 	appManager.loop();
-	
-	// シリアルコマンド受信処理（モード別）
-	if (Settings::getInstance().isSerialEnabled()) {
-		if (Settings::getInstance().getSerialMode() == Settings::SERIAL_TEXT) {
-			// テキスト（JSON）モード
-			if (serialSender.processTextCommand(g_servoPos, g_servoOff)) {
-				applyServoOutputs();
-			}
-		} else if (Settings::getInstance().getSerialMode() == Settings::SERIAL_BINARY) {
-			// バイナリモード
-			if (serialSender.processBinaryCommand(g_servoPos, g_servoOff)) {
-				applyServoOutputs();
-			}
-		}
-	}
 	
 	// 画面に描画
 	appManager.draw(canvas);
