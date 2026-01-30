@@ -34,6 +34,8 @@ bool SerialSender::sendControl(
     uint8_t _t8 = includeImu ? tempByte : 0;
     
     uint8_t buf[81];
+    // バイナリパケット生成（先頭に0xAA, 0x55のSYNCヘッダーを付加）
+    // SYNCヘッダーは CommProtocol::buildControlPacket() 内で付加される
     size_t n = CommProtocol::buildControlPacket(buf, sizeof(buf),
         _ax, _ay, _az, _gx, _gy, _gz, _t8,
         servoPos8, servoOff8, seq, true /* add ETX */);

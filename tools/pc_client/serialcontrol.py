@@ -1,4 +1,5 @@
 import math
+import json
 import struct
 import threading
 import queue
@@ -7,17 +8,9 @@ import argparse
 import serial
 import serial.tools.list_ports
 import pygame
+import sys
 import pyperclip
 import time
-import struct
-import threading
-import queue
-import json
-import argparse
-import serial
-import serial.tools.list_ports
-import pygame
-import pyperclip
 import os
 
 def save_window_position(x, y):
@@ -35,13 +28,17 @@ def load_window_position():
     except Exception:
         return None, None
 
+# --- グローバルデバッグフラグ ---
+DEBUG_MODE = False
+
 parser = argparse.ArgumentParser()
-parser.add_argument('--port', type=str, required=False, help='シリアルポート名')
+parser.add_argument('--port', type=str, required=False, default='COM8', help='シリアルポート名 (デフォルト: COM8)')
 parser.add_argument('--baud', type=int, default=115200, help='ボーレート')
 parser.add_argument('--binary', action='store_true', help='バイナリ通信モード')
 parser.add_argument('--fullscreen', action='store_true', help='フルスクリーン')
 parser.add_argument('--width', type=int, default=1280, help='ウィンドウ幅')
 parser.add_argument('--height', type=int, default=720, help='ウィンドウ高さ')
+parser.add_argument('--debug', action='store_true', help='デバッグモード（IMU/コマンドをprint出力）')
 
 # --- 定数 ---
 CUBE_SIZE = 60
@@ -105,6 +102,7 @@ class SerialClient(threading.Thread):
                 if self.ser.in_waiting:
                     data = self.ser.read(self.ser.in_waiting)
                     self.rx_raw_history += data
+                    # ...existing code...
                     if self.binary_mode:
                         # バイナリ: パケット分解
                         self._parse_binary(data)
@@ -122,10 +120,44 @@ class SerialClient(threading.Thread):
                 pass
             time.sleep(0.01)
 
+    def _debug_print_packets(self, data):
+        # 0xAA 0x55ごとに改行し、16進で表示（sys.stderr.writeで即時出力）
+        import sys
+        buf = getattr(self, '_debug_buf', b'') + data
+        out = []
+        i = 0
+        while i < len(buf) - 1:
+            if buf[i] == 0xAA and buf[i+1] == 0x55:
+                if out:
+                    sys.stderr.write(' '.join(out) + '\n')
+                    sys.stderr.flush()
+                    out = []
+                out.append('AA 55')
+                i += 2
+                continue
+            out.append(f'{buf[i]:02X}')
+            i += 1
+        # 残り1バイト分
+        if i < len(buf):
+            out.append(f'{buf[i]:02X}')
+            i += 1
+        # バッファに残す（次回先頭がAA 55になる可能性）
+        # 末尾2バイト分を残す
+        if len(buf) >= 2:
+            self._debug_buf = buf[-2:]
+        else:
+            self._debug_buf = buf
+        if out:
+            sys.stderr.write(' '.join(out) + '\n')
+            sys.stderr.flush()
+
     def _parse_binary(self, data):
+        import sys
+
         # [AA55][VER][TYPE][SEQ(2)][LEN(2)][PAYLOAD][CRC(2)][ETX(1)]
         buf = getattr(self, '_binbuf', b'') + data
         while len(buf) >= 12:  # 最小フレーム長
+
             if buf[0:2] != b'\xAA\x55':
                 buf = buf[1:]
                 continue
@@ -142,15 +174,37 @@ class SerialClient(threading.Thread):
             payload = pkt[8:8+LEN]
             crc_recv = struct.unpack('<H', pkt[8+LEN:8+LEN+2])[0]
             etx = pkt[-1]
-            crc_calc = crc16_ccitt(pkt[2:8+LEN])  # VER～PAYLOAD
+            crc_calc = crc16_ccitt(pkt[:8+LEN])  # VER～PAYLOAD
+            # CRC/ETXチェックを個別に分割し、どこでNGか明示
+            # if crc_recv != crc_calc:
+            #     print(f"[CRC NG] recv=0x{crc_recv:04X} calc=0x{crc_calc:04X} (recv={crc_recv}, calc={crc_calc})", end=' \n', flush=True)
+            # if etx != 0x7E:
+            #     print(f"[ETX NG] etx=0x{etx:02X}", end=' \\n', flush=True)
             if crc_recv == crc_calc and etx == 0x7E:
-                try:
-                    text = payload.decode(errors='ignore')
-                    self.recv_queue.put(text)
-                except Exception:
-                    pass
+                #print('-', end='', flush=True)
+                # IMUデータはペイロードの先頭25バイト（float*6+uint8）
+                if LEN >= 25:
+                    try:
+                        ax, ay, az, gx, gy, gz, temp = struct.unpack('<6fB', payload[:25])
+                        imu = ImuData()
+                        imu.ax = ax
+                        imu.ay = ay
+                        imu.az = az
+                        imu.gx = gx
+                        imu.gy = gy
+                        imu.gz = gz
+                        imu.temp = temp
+                        imu.seq = SEQ
+                        if DEBUG_MODE:
+                            print(f"[IMU BINARY] ax={ax:.2f} ay={ay:.2f} az={az:.2f} gx={gx:.2f} gy={gy:.2f} gz={gz:.2f} temp={temp}")
+                        self.recv_queue.put(imu)
+                    except Exception as e:
+                        #print(f"[IMU BINARY ERROR] {e}")
+                        #print(f"[IMU BINARY PAYLOAD] {payload[:25].hex()}")
+                        pass
                 buf = buf[total_len:]
             else:
+                # print('.', end='', flush=True)
                 buf = buf[1:]
         self._binbuf = buf
 
@@ -271,7 +325,8 @@ def draw_cube(screen, imu, area):
     zoffset = 3.0
     points = [project(v, w, h, scale=scale, zoffset=zoffset) for v in verts_r]
     points = [(x0 + p[0], y0 + p[1]) for p in points]
-    print(f"[DEBUG] draw_cube: points={points}")
+    # print(f"[DEBUG] draw_cube: points={points}")
+    # print(f"[IMU DATA] ax={imu.ax:.2f} ay={imu.ay:.2f} az={imu.az:.2f} gx={imu.gx:.2f} gy={imu.gy:.2f} gz={imu.gz:.2f} temp={imu.temp:.2f}")
     for a,b in edges:
         pygame.draw.line(screen, (200,200,200), points[a], points[b], 2)
     font = pygame.font.SysFont('consolas', 16)
@@ -344,7 +399,9 @@ class ScriptRunner:
 
 # --- メイン関数 ---
 def main():
+    global DEBUG_MODE
     args = parser.parse_args()
+    DEBUG_MODE = getattr(args, 'debug', False)
     # ウィンドウ位置の復元
     wx, wy = load_window_position()
     if wx is not None and wy is not None:
@@ -408,7 +465,7 @@ def main():
     cube_w = int(args.width * 0.25)
     cube_h = int(args.height * 0.5)
     cube_area = (slider_area_x + SERVO_COUNT * (slider_w + spacing) + 40, 60, cube_w, cube_h)
-    print(f"[DEBUG] cube_area: x={cube_area[0]}, y={cube_area[1]}, w={cube_area[2]}, h={cube_area[3]}")
+    #print(f"[DEBUG] cube_area: x={cube_area[0]}, y={cube_area[1]}, w={cube_area[2]}, h={cube_area[3]}")
     script_area = (20, slider_area_y + slider_h + 30, int(args.width*0.42), int(args.height*0.36))
 
     protocol_mode = "BINARY" if args.binary else "TEXT"
@@ -473,45 +530,91 @@ def main():
         return lines
 
     ping_button_pressed = False
+    # 姿勢記録用リスト（5個分）
+    def load_pose_memory():
+        try:
+            with open("pose_memory.json", "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list) and len(data) == 5:
+                    return data
+        except Exception:
+            pass
+        return [None] * 5
+
+    def save_pose_memory(mem):
+        try:
+            with open("pose_memory.json", "w", encoding="utf-8") as f:
+                json.dump(mem, f)
+        except Exception as e:
+            print(f"[WARN] Failed to save pose memory: {e}")
+
+    posture_memory = load_pose_memory()
+    posture_btn_rects = []
+    posture_btn_w = 80
+    posture_btn_h = 32
+    posture_btn_spacing = 14
+    # posture_btn_rectsの計算はbtn_x/btn_y定義後に行う
+
     while running:
         dt = clock.tick(60) / 1000.0
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.KEYDOWN:
-                if input_active:
-                    if event.key == pygame.K_ESCAPE:
-                        input_active = False
-                    elif event.key == pygame.K_BACKSPACE:
-                        script_text = script_text[:-1]
-                    elif event.key == pygame.K_RETURN:
-                        script_text += '\n'
-                    else:
-                        script_text += event.unicode
-                else:
-                    if event.key == pygame.K_ESCAPE:
-                        running = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mx,my = event.pos
+                # スクリプトエリアクリック
                 if script_area[0] <= mx <= script_area[0]+script_area[2] and script_area[1] <= my <= script_area[1]+script_area[3]:
                     input_active = True
                 else:
                     input_active = False
+                # Pingボタン
                 if 560 <= mx <= 640 and 360 <= my <= 390:
                     if not ping_button_pressed:
                         client.send_json({"cmd":"ping"})
                         status_msg = "Ping送信中..."
                         status_msg_time = time.time()
                         ping_button_pressed = True
-                if 560 <= mx <= 660 and 400 <= my <= 430:
-                    if not script_runner.running:
-                        script_runner.start(script_text)
-                if 560 <= mx <= 660 and 440 <= my <= 470:
-                    script_runner.stop()
+                # TX履歴コピー
                 if 700 <= mx <= 860 and args.height-120 <= my <= args.height-90:
                     pyperclip.copy('\n'.join(tx_history))
                     copy_status = "TX履歴をクリップボードにコピーしました"
                     copy_status_time = time.time()
+                # 姿勢記録ボタン群
+                for idx, rect in enumerate(posture_btn_rects):
+                    bx, by, bw, bh = rect
+                    if bx <= mx <= bx+bw and by <= my <= by+bh:
+                        if event.button == 1:  # 左クリック
+                            if posture_memory[idx] is None:
+                                # 記録: 現在のサーボ値を保存
+                                posture_memory[idx] = list(servo_values)
+                                save_pose_memory(posture_memory)
+                            else:
+                                # 再現: 記録済み姿勢をスライダに反映
+                                servo_values[:] = posture_memory[idx][:]
+                        elif event.button == 3:  # 右クリック
+                            if posture_memory[idx] is not None:
+                                posture_memory[idx] = None
+                                save_pose_memory(posture_memory)
+                        break
+                    copy_status = "TX履歴をクリップボードにコピーしました"
+                    copy_status_time = time.time()
+                # 姿勢記録ボタン群
+                for idx, rect in enumerate(posture_btn_rects):
+                    bx, by, bw, bh = rect
+                    if bx <= mx <= bx+bw and by <= my <= by+bh:
+                        if posture_memory[idx] is None:
+                            # 記録: 現在のサーボ値を保存
+                            posture_memory[idx] = list(servo_values)
+                            save_pose_memory(posture_memory)
+                        else:
+                            # 再現: 記録済み姿勢をスライダに反映
+                            servo_values[:] = posture_memory[idx][:]
+                            # ここで全サーボ値をロボットへ送信
+                            cmd = {"cmd": "set_all", "vals": servo_values}
+                            if DEBUG_MODE:
+                                print(f"[POSE RECALL] send: {cmd}")
+                            client.send_json(cmd)
+                        break
             elif event.type == pygame.MOUSEBUTTONUP:
                 mx, my = event.pos
                 if 560 <= mx <= 640 and 360 <= my <= 390:
@@ -523,34 +626,51 @@ def main():
 
         # --- 受信処理 ---
         while not client.recv_queue.empty():
-            line = client.recv_queue.get()
-            try:
-                obj = json.loads(line)
+            item = client.recv_queue.get()
+            # バイナリIMUデータの場合
+            if isinstance(item, ImuData):
+                imu.ax = item.ax
+                imu.ay = item.ay
+                imu.az = item.az
+                imu.gx = item.gx
+                imu.gy = item.gy
+                imu.gz = item.gz
+                imu.temp = item.temp
+                last_seq = item.seq
+                continue
+            obj = None
+            if isinstance(item, dict):
+                obj = item
+            else:
+                try:
+                    obj = json.loads(item)
+                except Exception:
+                    pass
+            if not isinstance(obj, dict):
+                continue  # 無効なデータは無視
+            # IMUデータがある場合のみ反映
+            if 'imu' in obj:
+                imu_obj = obj['imu']
+                imu.ax = float(imu_obj.get('ax', imu.ax))
+                imu.ay = float(imu_obj.get('ay', imu.ay))
+                imu.az = float(imu_obj.get('az', imu.az))
+                imu.gx = float(imu_obj.get('gx', imu.gx))
+                imu.gy = float(imu_obj.get('gy', imu.gy))
+                imu.gz = float(imu_obj.get('gz', imu.gz))
+                imu.temp = float(imu_obj.get('temp', imu.temp))
+            if 'seq' in obj:
                 last_seq = obj.get('seq', last_seq)
-                if 'resp' in obj:
-                    resp_type = obj['resp']
-                    if resp_type == 'pong':
-                        millis = obj.get('millis', 0)
-                        status_msg = f'Ping OK! Device millis: {millis}'
-                    else:
-                        status_msg = f'Response: {resp_type}'
-                    status_msg_time = time.time()
-                if 'imu' in obj:
-                    imu_obj = obj['imu']
-                    imu.ax = float(imu_obj.get('ax', imu.ax))
-                    imu.ay = float(imu_obj.get('ay', imu.ay))
-                    imu.az = float(imu_obj.get('az', imu.az))
-                    imu.gx = float(imu_obj.get('gx', imu.gx))
-                    imu.gy = float(imu_obj.get('gy', imu.gy))
-                    imu.gz = float(imu_obj.get('gz', imu.gz))
-                    imu.temp = float(imu_obj.get('temp', imu.temp))
-                imu.seq = last_seq
-                if 'pos' in obj and isinstance(obj['pos'], list):
-                    for i,v in enumerate(obj['pos'][:SERVO_COUNT]):
-                        servo_values[i] = int(v)
-            except json.JSONDecodeError:
-                status_msg = 'JSON parse error'
+            if 'resp' in obj:
+                resp_type = obj['resp']
+                if resp_type == 'pong':
+                    millis = obj.get('millis', 0)
+                    status_msg = f'Ping OK! Device millis: {millis}'
+                else:
+                    status_msg = f'Response: {resp_type}'
                 status_msg_time = time.time()
+            if 'pos' in obj and isinstance(obj['pos'], list):
+                for i,v in enumerate(obj['pos'][:SERVO_COUNT]):
+                    servo_values[i] = int(v)
 
         if status_msg and time.time() - status_msg_time > 3.0:
             status_msg = ""
@@ -558,23 +678,29 @@ def main():
         # --- UI描画 ---
         screen.fill((20, 22, 28))
         draw_sliders(screen, slider_rects, servo_values, font, client, last_send_times)
+        # 姿勢記録ボタン群の描画（TX履歴右下に横並び）
+        for idx, rect in enumerate(posture_btn_rects):
+            bx, by, bw, bh = rect
+            if posture_memory[idx] is None:
+                btn_color = (220, 220, 220)
+                label = f"Pose{idx+1}"
+            else:
+                btn_color = (120, 255, 180)
+                label = f"Recall{idx+1}"
+            pygame.draw.rect(screen, btn_color, rect, border_radius=6)
+            screen.blit(small.render(label, True, (30,30,30)), (bx+10, by+8))
         screen.blit(font.render(f'Serial: {client.port} @ {client.baud} ({protocol_mode})', True, (200,200,200)), (20, 20))
         screen.blit(font.render(f'Seq: {last_seq}', True, (120,200,120)), (20, 50))
         pygame.draw.rect(screen, (35,40,45), cube_area, border_radius=8)
         draw_cube(screen, imu, cube_area)
-        screen.blit(font.render('IMU Cube (roll/pitch from accel)', True, (200,200,200)), (cube_area[0], cube_area[1]-24))
+        screen.blit(font.render('IMU Cube', True, (200,200,200)), (cube_area[0], cube_area[1]-24))
         pygame.draw.rect(screen, (35,40,45), script_area, border_radius=8)
-        script_lines = script_text.split('\n')
-        for idx, line in enumerate(script_lines[-14:]):
-            screen.blit(small.render(line, True, (230,230,230)), (script_area[0]+8, script_area[1]+8+idx*18))
-        pygame.draw.rect(screen, (80,120,200) if input_active else (90,90,100), script_area, 2, border_radius=8)
-        screen.blit(font.render('Script (one cmd per line)', True, (200,200,200)), (script_area[0], script_area[1]-24))
+        # scriptエリアは今後未使用
         def draw_btn(x,y,w,h,text,color):
             pygame.draw.rect(screen, color, (x,y,w,h), border_radius=6)
             screen.blit(small.render(text, True, (20,20,20)), (x+8,y+6))
         draw_btn(560, 360, 80, 30, 'Ping', (120,200,255))
-        draw_btn(560, 400, 100, 30, 'Run Script', (120,255,120))
-        draw_btn(560, 440, 100, 30, 'Stop Script', (255,120,120))
+        # Run Script/Stop Scriptボタンは削除
         bottom_margin = 60
         rx_h = 36
         msg_h = font.get_linesize() + 8
@@ -582,7 +708,7 @@ def main():
         tx_x = 20
         tx_w = int(args.width * 0.55)
         tx_y = args.height - (rx_h + msg_h + tx_h + bottom_margin)
-        screen.blit(small.render('TX History (Sent Commands):', True, (255,200,120)), (tx_x, tx_y))
+        screen.blit(small.render('TX Log', True, (255,200,120)), (tx_x, tx_y))
         tx_line_h = small.get_linesize()
         tx_lines_max = (tx_h // tx_line_h) - 1
         tx_lines = []
@@ -593,9 +719,17 @@ def main():
             screen.blit(small.render(line, True, (255,220,180)), (tx_x+20, tx_y + 18 + i*tx_line_h))
         btn_x = tx_x + tx_w + 20
         btn_y = tx_y
-        draw_btn(btn_x, btn_y, 160, 30, 'TX履歴をコピー', (255,255,180))
+        draw_btn(btn_x, btn_y, 160, 30, 'Copy TX', (255,255,180))
+        # 姿勢記録ボタンのレイアウト計算（TX履歴ボタンの右下に並べる）
+        posture_btn_rects.clear()
+        posture_btn_area_x = btn_x
+        posture_btn_area_y = btn_y + 40
+        for i in range(5):
+            bx = posture_btn_area_x + i * (posture_btn_w + posture_btn_spacing)
+            by = posture_btn_area_y
+            posture_btn_rects.append((bx, by, posture_btn_w, posture_btn_h))
         if copy_status and time.time() - copy_status_time < 2.0:
-            screen.blit(small.render(copy_status, True, (255,180,120)), (btn_x, btn_y+36))
+            screen.blit(small.render('Copied!', True, (255,180,120)), (btn_x, btn_y+36))
         rx_y = args.height - (rx_h + msg_h + bottom_margin)
         rx_x = 20
         rx_w = int(args.width * 0.85)
@@ -618,7 +752,9 @@ def main():
             screen.blit(small.render(line, True, (120,255,120)), (rx_x, rx_y + i*rx_line_h))
         msg_y = args.height - (msg_h + bottom_margin//2)
         if status_msg:
-            status_lines = wrap_text(status_msg, font, int(args.width*0.8))
+            # 英数字のみのメッセージに変換
+            safe_msg = status_msg.encode('ascii', errors='replace').decode('ascii')
+            status_lines = wrap_text(safe_msg, font, int(args.width*0.8))
             for i, line in enumerate(status_lines):
                 screen.blit(font.render(line, True, (255,120,120)), (20, msg_y + i*font.get_linesize()))
         pygame.display.flip()
