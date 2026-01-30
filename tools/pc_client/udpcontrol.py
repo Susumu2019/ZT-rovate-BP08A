@@ -35,12 +35,16 @@ class UdpRobotClient:
 
         servo_frame = tk.Frame(master)
         servo_frame.pack(pady=5)
+
         for i in range(8):
             tk.Label(servo_frame, text=f"Servo {i}").grid(row=i, column=0)
-            tk.Scale(servo_frame, from_=0, to=180, orient=tk.HORIZONTAL, variable=self.servo_vars[i], length=200).grid(row=i, column=1)
+            scale = tk.Scale(servo_frame, from_=0, to=180, orient=tk.HORIZONTAL, variable=self.servo_vars[i], length=200,
+                            command=lambda val, idx=i: self.on_slider_change(idx, val))
+            scale.grid(row=i, column=1)
 
-        self.status_label = tk.Label(master, textvariable=self.status_var, fg="blue")
-        self.status_label.pack(pady=5)
+        # すべて中立ボタン
+        self.neutral_btn = tk.Button(master, text="すべて中立(90度)", command=self.set_all_neutral)
+        self.neutral_btn.pack(pady=5)
 
         # IMU値を表形式で表示
         imu_frame = tk.Frame(master)
@@ -76,6 +80,54 @@ class UdpRobotClient:
         self.canvas = FigureCanvasTkAgg(self.fig, master)
         self.canvas.get_tk_widget().pack(pady=5)
         self._draw_cube()
+
+    def on_slider_change(self, idx, val):
+        self.send_servo()
+
+
+        # すべて中立ボタン
+        self.neutral_btn = tk.Button(master, text="すべて中立(90度)", command=self.set_all_neutral)
+        self.neutral_btn.pack(pady=5)
+
+        # IMU値を表形式で表示
+        imu_frame = tk.Frame(master)
+        imu_frame.pack(pady=5)
+        headers = ["roll", "pitch", "yaw", "gyro_x", "gyro_y", "gyro_z", "temp"]
+        for i, h in enumerate(headers):
+            tk.Label(imu_frame, text=h, borderwidth=1, relief="solid", width=8, fg="green").grid(row=0, column=i)
+            v = tk.StringVar(value="-")
+            lbl = tk.Label(imu_frame, textvariable=v, borderwidth=1, relief="solid", width=8)
+            lbl.grid(row=1, column=i)
+            self.imu_labels[h] = v
+
+        # 3D立方体描画エリア
+        self.fig = plt.Figure(figsize=(3, 3))
+        self.ax = self.fig.add_subplot(111, projection='3d')
+        self.ax.set_xlim([-1, 1])
+        self.ax.set_ylim([-1, 1])
+        self.ax.set_zlim([-1, 1])
+        self.ax.set_box_aspect([1,1,1])
+        self.ax.set_axis_off()
+        self.cube = None
+        self.roll = 0.0
+        self.pitch = 0.0
+        self.yaw = 0.0
+        # 正面面の選択設定
+        self.front_face_var = tk.StringVar(value="y-")
+        face_options = ["x+", "x-", "y+", "y-"]
+        face_frame = tk.Frame(master)
+        face_frame.pack(pady=2)
+        tk.Label(face_frame, text="Front face:").pack(side=tk.LEFT)
+        self.face_menu = tk.OptionMenu(face_frame, self.front_face_var, *face_options, command=lambda _: self._draw_cube())
+        self.face_menu.pack(side=tk.LEFT)
+        self.canvas = FigureCanvasTkAgg(self.fig, master)
+        self.canvas.get_tk_widget().pack(pady=5)
+        self._draw_cube()
+
+    def set_all_neutral(self):
+        for v in self.servo_vars:
+            v.set(90)
+        self.send_servo()
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(("", LOCAL_PORT))
@@ -145,15 +197,15 @@ class UdpRobotClient:
 
     def send_servo(self, auto=False):
         ip = self.ip_entry.get()
-        # 送信パケット: SYNC(0xAA55) + 8ch u16リトルエンディアン（角度→パルス幅変換）
+        # 送信パケット: SYNC(0xAA55) + 8ch u16リトルエンディアン（角度値0～180をそのまま送信）
         buf = bytearray()
         buf += b'\xAA\x55'
         for v in self.servo_vars:
             angle = v.get()
             if angle < 0: angle = 0
             if angle > 180: angle = 180
-            pulse = 500 + (angle * 2000) // 180  # 0度=500μs, 180度=2500μs
-            buf += struct.pack('<H', pulse)
+            buf += struct.pack('<H', angle)
+        print(f"[DEBUG] 送信先: {ip}:{ROBOT_PORT} バイト列: {list(buf)}")
         try:
             self.sock.sendto(buf, (ip, ROBOT_PORT))
             if not auto:
@@ -166,6 +218,7 @@ class UdpRobotClient:
         while self.running:
             try:
                 data, addr = self.sock.recvfrom(128)
+                print(f"[DEBUG] 受信: {addr} バイト列: {list(data)}")
                 # ESP32からのIMUデータ（バイナリ）を受信した場合の例
                 if len(data) >= 8 and data[0] == 0xAA and data[1] == 0x55:
                     # 例: [AA 55][roll][pitch][yaw][gx][gy][gz][temp] (float*6+uint8)
@@ -197,7 +250,8 @@ class UdpRobotClient:
 
     def on_close(self):
         self.running = False
-        self.sock.close()
+        if hasattr(self, 'sock') and self.sock:
+            self.sock.close()
         self.master.destroy()
 
 if __name__ == "__main__":

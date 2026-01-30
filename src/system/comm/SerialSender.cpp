@@ -297,7 +297,7 @@ bool SerialSender::processBinaryCommand(uint16_t* servoPos8, uint16_t* servoOff8
                             } else if (cmd == 0x03) {  // RESET
                                 if (servoPos8) {
                                     for (int i = 0; i < 8; i++) {
-                                        servoPos8[i] = 1500;
+                                        servoPos8[i] = 90; // 中立角度（0～180度）
                                         if (servoOff8) servoOff8[i] = 0;
                                     }
                                     commandProcessed = true;

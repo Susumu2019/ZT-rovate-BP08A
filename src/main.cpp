@@ -108,13 +108,18 @@ void processUdpServoPacket(const uint8_t* data, size_t len) {
 	if (len < 2 + 16) return;
 	if (data[0] != 0xAA || data[1] != 0x55) return;
 	for (int i = 0; i < 8; ++i) {
-		uint16_t pulse = data[2 + i * 2] | (data[2 + i * 2 + 1] << 8);
-		if (pulse < 500) pulse = 500;
-		if (pulse > 2500) pulse = 2500;
-		// パルス幅(μs)→角度(0～180)へ変換
-		uint16_t angle = (pulse <= 500) ? 0 : (pulse >= 2500) ? 180 : (uint16_t)(((pulse - 500) * 180) / 1000);
+		uint16_t angle = data[2 + i * 2] | (data[2 + i * 2 + 1] << 8);
+		if (angle > 180) angle = 180;
+		if (angle < 0) angle = 0;
 		g_servoPos[i] = angle;
 	}
+	// g_servoPos[]の内容をシリアル出力
+	Serial.print("g_servoPos: [");
+	for (int i = 0; i < 8; ++i) {
+		Serial.print(g_servoPos[i]);
+		if (i < 7) Serial.print(", ");
+	}
+	Serial.println("]");
 	applyServoOutputs();
 }
 
