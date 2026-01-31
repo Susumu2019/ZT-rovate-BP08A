@@ -40,6 +40,10 @@ static constexpr int LOGO_HEIGHT = 240;
 float imu_roll_offset = 0.0f;
 // サーボ・LED制御開始フラグ
 bool systemStarted = false;
+// LED点滅用
+bool led_blink_state = false;
+uint32_t led_blink_last_ms = 0;
+const uint32_t led_blink_interval_ms = 1000;
 float imu_pitch_offset = 0.0f;
 float imu_yaw_offset = 0.0f;
 bool imu6886_connected = false;
@@ -129,19 +133,35 @@ void processUdpServoPacket(const uint8_t* data, size_t len) {
  * @param serialOk シリアル送信成功
  */
 void updateLedPattern(bool udpOk, bool serialOk) {
-		// 26個LEDのうち中央3個(11,12,13)を緑、それ以外は白
-		for (int i = 0; i < WS2812_COUNT; i++) {
-			if (i == 0) {
-				leds[i] = CRGB::Red;
-			} else if (i == WS2812_COUNT - 1) {
-				leds[i] = CRGB::Blue;
-			} else if (i == 6 || i == 7 || i == 8) {
+	// バッテリー残量取得（0-100）
+	int battery_level = M5.Power.getBatteryLevel();
+	CRGB batteryColor = CRGB::White;
+	if (battery_level < 30) {
+		batteryColor = CRGB::Red;
+	} else if (battery_level < 40) {
+		batteryColor = CRGB(255, 140, 0); // オレンジ
+	} else if (battery_level < 60) {
+		batteryColor = CRGB::Yellow;
+	} else {
+		batteryColor = CRGB::White;
+	}
+
+	for (int i = 0; i < WS2812_COUNT; i++) {
+		if (i == 0) {
+			leds[i] = CRGB::Red;
+		} else if (i == WS2812_COUNT - 1) {
+			leds[i] = CRGB::Blue;
+		} else if (i == 6 || i == 7 || i == 8) {
+			if (led_blink_state) {
 				leds[i] = CRGB::Green;
 			} else {
-				leds[i] = CRGB::White;
+				leds[i] = batteryColor;
 			}
+		} else {
+			leds[i] = batteryColor;
 		}
-		FastLED.show();
+	}
+	FastLED.show();
 }
 
 
@@ -324,11 +344,17 @@ void sendImuUdp(float ax, float ay, float az, float gx, float gy, float gz, uint
 void loop() {
 	// loop開始時に1回だけ通常制御へ切り替え
 	if (!systemStarted) {
-		// LEDを通常表示に
-		updateLedPattern(true, true); // 通常表示（引数は任意、必要に応じて変更）
-		// サーボ制御ON
+		updateLedPattern(true, true);
 		applyServoOutputs();
 		systemStarted = true;
+	}
+
+	// --- LED点滅制御 ---
+	uint32_t now_blink = millis();
+	if (now_blink - led_blink_last_ms >= led_blink_interval_ms) {
+		led_blink_last_ms = now_blink;
+		led_blink_state = !led_blink_state;
+		updateLedPattern(true, true); // 点滅時もパターン更新
 	}
 	// ハードウェアの状態を更新（ボタン、電源など）
 	CoreS3.update();
