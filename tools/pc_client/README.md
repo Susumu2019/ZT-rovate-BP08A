@@ -1,5 +1,7 @@
 # PCクライアント (シリアル制御)
 
+最終更新日: 2026年2月1日
+
 M5Stack CoreS3 のファームウェアと通信する pygame クライアント。
 テキストJSONモードとバイナリプロトコルの両方に対応。
 
@@ -86,7 +88,21 @@ ping
 - `Run Script` / `Stop Script` ボタン
 - `Ping` ボタンで疎通確認
 
-## メモ
-- ロール/ピッチは加速度から推定。ヨーは0固定。
-- デバイス側でIMU出力OFFでも `seq` は更新されるが、立方体は水平のまま。
-- バイナリモードはテキストモードより帯域幅効率的。高速ロボット制御に推奨。
+
+## UDP通信フォーマット・プロトコル
+
+### 送信（PC→ロボット）
+- サーボ角度一括送信: `[AA55][angle0][angle1]...[angle7]`（各angleはu16リトルエンディアン, 0-180）
+  - 例: `AA 55 5A 00 5A 00 ...`（8ch分, 90度=0x5A）
+
+### 受信（ロボット→PC）
+- IMUデータ: `[AA55][roll][pitch][yaw][gx][gy][gz][temp]`（float*6+uint8, little endian）
+  - 例: `AA 55 <float*6> <uint8>`
+  - roll/pitch/yaw: degree, gx/gy/gz: deg/s, temp: 温度
+
+### 注意事項
+- UDPはコネクションレス。パケットロスに注意。
+- 送信先IP/PORTはROBOT_IP/ROBOT_PORTで指定。
+- 受信側はLOCAL_PORTで待ち受け。
+
+---

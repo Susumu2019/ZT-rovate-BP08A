@@ -1,5 +1,7 @@
 # rovate_Bipedal_TYPE-A
 
+最終更新日: 2026年2月1日
+
 <img src="lib/rovate_240_240.png" width="25%" alt="rovate logo">
 
 **rovate** は **zeatec** が開発するロボットシリーズのブランド名です。
