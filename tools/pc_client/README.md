@@ -89,7 +89,55 @@ ping
 - `Ping` ボタンで疎通確認
 
 
-## UDP通信フォーマット・プロトコル
+
+---
+
+## 各ファイルの役割・使い方
+
+### main.py
+- **役割**: PCクライアントのメインGUIアプリ（pygameベース）。シリアル/バイナリ通信でロボットを制御・可視化。
+- **使い方**: `python main.py --port COM8 --baud 921600` など。GUIでサーボ操作・IMU可視化・スクリプト実行。
+- **使用例**: サーボスライダーを動かすとリアルタイムでロボットが動作。
+
+### serialcontrol.py
+- **役割**: コマンドラインからシリアル通信でロボット制御・状態取得。バイナリ/テキスト両対応。
+- **使い方**: `python serialcontrol.py --port COM8 --baud 921600 --binary` など。コマンド送信や受信データの表示。
+- **使用例**: `--binary`でバイナリ通信、`--port`でポート指定。
+
+### udpcontrol.py
+- **役割**: UDP通信でロボットを制御・IMU値を受信するTkinter GUIアプリ。
+- **使い方**: `python udpcontrol.py` で起動。IP/ポート指定、サーボ操作、IMU値の3D表示。
+- **使用例**: サーボスライダーで角度を送信、IMU値が表や3Dで可視化。
+
+### requirements.txt
+- **役割**: Python依存パッケージリスト。
+- **使い方**: `pip install -r requirements.txt` で必要なライブラリを一括インストール。
+
+### pose_memory.json
+- **役割**: サーボのポーズ（角度セット）を記録・再生するためのJSONデータ。
+- **使い方**: main.py等から自動的に読み書き。
+
+### udpcontrol.bat
+- **役割**: 仮想環境のPythonでudpcontrol.pyを実行するWindowsバッチ。
+- **使い方**: ダブルクリックでUDPコントローラGUIを起動。
+
+### serialcontrol.bat / serialcontrol_text.bat
+- **役割**: serialcontrol.pyをテキスト通信モードで起動。
+- **使い方**: ダブルクリックでCOM8, 921600bpsで起動。
+
+### serialcontrol_binary.bat / serialcontrol_binary_debug.bat
+- **役割**: serialcontrol.pyをバイナリ通信モードで起動（debugは詳細出力）。
+- **使い方**: ダブルクリックでCOM8, 921600bps, バイナリ通信で起動。
+
+### 受信したバイナリデータをテキストに変換して表示.py
+- **役割**: シリアル受信データをテキスト変換して表示。
+- **使い方**: `python 受信したバイナリデータをテキストに変換して表示.py`。改行区切りでテキスト表示。
+
+### 受信したバイナリデータを表示.py
+- **役割**: シリアル受信データをバイナリ（16進）で表示。
+- **使い方**: `python 受信したバイナリデータを表示.py`。AA55ヘッダでパケット分割し16進表示。
+
+---
 
 ### 送信（PC→ロボット）
 - サーボ角度一括送信: `[AA55][angle0][angle1]...[angle7]`（各angleはu16リトルエンディアン, 0-180）

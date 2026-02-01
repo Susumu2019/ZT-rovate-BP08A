@@ -6,9 +6,28 @@
 
 **rovate** は **zeatec** が開発するロボットシリーズのブランド名です。
 このプロジェクトは、 **rovate** の二足歩行ロボット **Bipedal Type-A** コントローラー用マイコンアプリケーションです。
+
 M5Stack CoreS3をベースに、複数のアプリ（画面）で直感的にロボットを制御できるシステムになっています。
 
+### 主な特徴
+- タッチUIによる直感操作（ボタン・スライダー・スイッチ）
+- シリアル通信（テキスト/バイナリ/JSON）・UDP通信対応
+- PCクライアント（Python/pygame, UDP/シリアル）で外部制御・可視化
+- IMU（加速度・ジャイロ）・サーボ・モーター制御
+- 拡張性の高いアプリ構造（AppManager/テンプレート）
+
 ---
+
+## 🔗 通信仕様・プロトコル
+
+本プロジェクトは以下の通信方式に対応しています：
+
+- **シリアル通信（テキスト/JSON/バイナリ）**
+    - 詳細: [README_serial_command.md](README_serial_command.md)
+- **UDP通信（PC⇔ロボット）**
+    - 詳細: [src/App/AppWifi/README.md](src/App/AppWifi/README.md), [tools/pc_client/README.md](tools/pc_client/README.md)
+
+通信コマンド例やフォーマットは各READMEに記載しています。
 
 ## 🎯 このプロジェクトについて
 
@@ -99,87 +118,159 @@ USBケーブルでパソコンとM5Stackを接続します。
 
 ---
 
-## 📂 プロジェクト構成
+
+## 📂 プロジェクト構成（全ファイル一覧）
 
 ```
-M5CoreS3SE_Template-main/
-├── platformio.ini          # PlatformIO設定ファイル
-├── README.md               # このファイル
-├── include/                # ヘッダファイル（グローバル設定）
-│   ├── config.h           # 画面サイズなどの設定
-│   ├── color_config.h     # 色の定義
-│   └── README
-├── src/                    # ソースコード（ここが重要！）
-│   ├── main.cpp           # メインプログラム（エントリポイント）
-│   ├── README.md          # ソースコード全体の説明
-│   ├── App/               # アプリケーション層
-│   │   ├── App.h          # アプリの基底クラス
-│   │   ├── README.md      # アプリ関連の説明
-│   │   ├── AppManager/    # アプリ管理システム
-│   │   │   ├── AppManager.h
-│   │   │   ├── AppManager.cpp
-│   │   │   └── README.md
-│   │   ├── AppInfo/       # 情報表示アプリ
-│   │   │   ├── AppInfo.h
-│   │   │   ├── AppInfo.cpp
-│   │   │   └── README.md
-│   │   ├── AppLock/       # ロック画面アプリ
-│   │   │   ├── AppLock.h
-│   │   │   ├── AppLock.cpp
-│   │   │   └── README.md
-│   │   ├── AppMotor/      # モーター制御アプリ
-│   │   │   ├── AppMotor.h
-│   │   │   ├── AppMotor.cpp
-│   │   │   └── README.md
-│   │   ├── AppTemplete/   # 新規アプリのテンプレート
-│   │   │   ├── AppTemplate.h
-│   │   │   ├── AppTemplate.cpp
-│   │   │   └── README.md
-│   │   └── HomeScreen/    # ホーム画面
-│   │       ├── HomeScreen.h
-│   │       ├── HomeScreen.cpp
-│   │       └── README.md
-│   ├── UI/                # ユーザーインターフェース部品
-│   │   ├── README.md
-│   │   ├── Button/        # ボタン
-│   │   │   ├── Button.h
-│   │   │   ├── ButtonView.cpp
-│   │   │   ├── ButtonTouch.cpp
-│   │   │   └── README.md
-│   │   ├── Icon/          # アイコン
-│   │   │   ├── Icon.h
-│   │   │   ├── Icon.cpp
-│   │   │   └── README.md
-│   │   ├── SliderBar/     # スライダー
-│   │   │   ├── SliderBar.h
-│   │   │   ├── SliderBar.cpp
-│   │   │   └── README.md
-│   │   ├── Switch/        # トグルスイッチ
-│   │   │   ├── ToggleSwitch.h
-│   │   │   ├── ToggleSwitch.cpp
-│   │   │   └── README.md
-│   │   └── TopBar/        # 画面上部バー
-│   │       ├── TopBar.h
-│   │       ├── TopBar.cpp
-│   │       └── README.md
-│   ├── system/            # システム基盤
-│   │   ├── README.md
-│   │   ├── system.h       # システム全体の設定
-│   │   ├── system.cpp
-│   │   └── touch/         # タッチ入力管理
-│   │       ├── README.md
-│   │       ├── TouchManager.h
-│   │       └── TouchManager.cpp
-│   ├── timer/             # ハードウェアタイマー
-│   │   ├── README.md
-│   │   ├── timer.h
-│   │   └── timer.cpp
-├── lib/                    # ライブラリフォルダ
-│   └── README
-├── test/                   # テストフォルダ
-│   └── README
-└── docs/                   # ドキュメント
+.git/
+.gitignore
+.pio/
+.pio.zip
+.venv/
+.vscode/
+datasheet/
+    └── M5CoreS3-SE_ピンアサイン.jpg
+docs/
     └── TOUCH_ARCHITECTURE.md
+include/
+    ├── color_config.h
+    ├── config.h
+    └── README
+lib/
+    ├── MPU6886_AHRS/
+    │   ├── examples/
+    │   │   └── BasicOrientation/
+    │   │       └── BasicOrientation.ino
+    │   ├── imu_config.h
+    │   ├── library.properties
+    │   ├── LIBRARY_SUMMARY.md
+    │   ├── MadgwickAHRS.cpp
+    │   ├── MadgwickAHRS.h
+    │   ├── MPU6886.cpp
+    │   ├── MPU6886.h
+    │   ├── MPU6886_AHRS.cpp
+    │   ├── MPU6886_AHRS.h
+    │   └── README.md
+    ├── README
+    ├── rovate_240_240.bmp
+    └── rovate_240_240.png
+output.txt
+platformio.ini
+README.md
+src/
+    ├── App/
+    │   ├── App.h
+    │   ├── AppAction/
+    │   │   ├── AppAction.cpp
+    │   │   ├── AppAction.h
+    │   │   ├── AppActionData.cpp
+    │   │   ├── README.md
+    │   │   ├── ServoImuController.cpp
+    │   │   └── ServoImuController.h
+    │   ├── AppI2CScan/
+    │   │   ├── AppI2CScan.cpp
+    │   │   ├── AppI2CScan.h
+    │   │   └── README.md
+    │   ├── AppIMU/
+    │   │   ├── AppIMU.cpp
+    │   │   ├── AppIMU.h
+    │   │   └── README.md
+    │   ├── AppInfo/
+    │   │   └── AppInfo.h
+    │   ├── AppManager/
+    │   │   ├── AppManager.cpp
+    │   │   ├── AppManager.h
+    │   │   └── README.md
+    │   ├── AppManual/
+    │   │   ├── AppManual.cpp
+    │   │   ├── AppManual.h
+    │   │   └── README.md
+    │   ├── AppMotor/
+    │   │   ├── AppMotor.cpp
+    │   │   ├── AppMotor.h
+    │   │   └── README.md
+    │   ├── AppSetup/
+    │   │   ├── AppSetup.cpp
+    │   │   └── AppSetup.h
+    │   ├── AppTemplete/
+    │   │   ├── AppTemplate.cpp
+    │   │   ├── AppTemplate.h
+    │   │   └── README.md
+    │   ├── AppWifi/
+    │   │   ├── AppWifi.cpp
+    │   │   └── AppWifi.h
+    │   ├── HomeScreen/
+    │   │   ├── HomeScreen.cpp
+    │   │   ├── HomeScreen.h
+    │   │   └── README.md
+    │   └── README.md
+    ├── main.cpp
+    ├── README.md
+    ├── system/
+    │   ├── comm/
+    │   │   ├── CommProtocol.cpp
+    │   │   ├── CommProtocol.h
+    │   │   ├── README_serial_command.md
+    │   │   ├── README_wifi_command.md
+    │   │   ├── SerialSender.cpp
+    │   │   ├── SerialSender.h
+    │   │   ├── UdpSender.cpp
+    │   │   └── UdpSender.h
+    │   ├── IMU_6886.cpp.bak
+    │   ├── IMU_6886.h.bak
+    │   ├── README.md
+    │   ├── Settings.cpp
+    │   ├── Settings.h
+    │   ├── system.cpp
+    │   ├── system.h
+    │   └── touch/
+    │       ├── README.md
+    │       ├── TouchManager.cpp
+    │       └── TouchManager.h
+    ├── timer/
+    │   ├── README.md
+    │   ├── timer.cpp
+    │   └── timer.h
+    ├── UI/
+    │   ├── Button/
+    │   │   ├── Button.h
+    │   │   ├── ButtonTouch.cpp
+    │   │   ├── ButtonView.cpp
+    │   │   └── README.md
+    │   ├── Icon/
+    │   │   ├── Icon.cpp
+    │   │   ├── Icon.h
+    │   │   └── README.md
+    │   ├── README.md
+    │   ├── SliderBar/
+    │   │   ├── README.md
+    │   │   ├── SliderBar.cpp
+    │   │   └── SliderBar.h
+    │   ├── Switch/
+    │   │   ├── README.md
+    │   │   ├── ToggleSwitch.cpp
+    │   │   └── ToggleSwitch.h
+    │   └── TopBar/
+    │       ├── README.md
+    │       ├── TopBar.cpp
+    │       └── TopBar.h
+test/
+    └── README
+tools/
+    └── pc_client/
+            ├── main.py
+            ├── pose_memory.json
+            ├── README.md
+            ├── requirements.txt
+            ├── RunUdpControl.bat
+            ├── serialcontrol.bat
+            ├── serialcontrol.py
+            ├── serialcontrol_binary.bat
+            ├── serialcontrol_binary_debug.bat
+            ├── serialcontrol_text.bat
+            ├── udpcontrol.py
+            ├── 受信したバイナリデータをテキストに変換して表示.py
+            └── 受信したバイナリデータを表示.py
 ```
 
 💡 **各フォルダに詳しいREADME.mdがあります**：使い方や関数の説明を参照してください。
