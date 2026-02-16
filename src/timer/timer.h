@@ -4,7 +4,7 @@
  * @brief    timer for M5Stack CoreS3 SE Header File
  * @version  V1.0
  * @date     2025-10-1
- * @author   Atsuya Kusui
+ * @author   Susumu Hirai
  *****************************************************************************
  */
 #pragma once

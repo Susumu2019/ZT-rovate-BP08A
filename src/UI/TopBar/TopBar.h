@@ -5,7 +5,7 @@
  * @details  アプリ名とライフカウンターを表示
  * @version  V1.0
  * @date     2025-10-3
- * @author   Atsuya Kusui
+ * @author   Susumu Hirai
  *****************************************************************************
  */
 #pragma once

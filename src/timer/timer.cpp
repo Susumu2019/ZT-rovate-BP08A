@@ -4,7 +4,7 @@
  * @brief    timer for M5Stack CoreS3 SE Source File
  * @version  V1.0
  * @date     2025-10-1
- * @author   Atsuya Kusui
+ * @author   Susumu Hirai
  *****************************************************************************
  */
 #include "timer.h"
