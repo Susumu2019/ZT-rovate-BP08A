@@ -30,6 +30,364 @@
 
 ---
 
+## 開発環境
+
+### システム要件
+
+#### ハードウェア
+- **M5Stack CoreS3** 或いは **M5Stack CoreS3 SE** （主要な開発対象）
+- **USB Type-C ケーブル** （データ通信対応）
+- X線機器対応のI2Cセンサー・サーボドライバ等の外部デバイス（オプション）
+
+#### OS・コンピュータ
+- **Windows 10以上** / **macOS 10.15以上** / **Linux（Ubuntu 18.04以上推奨）**
+- RAM: 4GB以上（PlatformIO初期セットアップには6GB以上推奨）
+- ディスク容量: 2GB以上（PlatformIO, ツールチェーン含む）
+
+### 必要なツール・環境
+
+#### 1. **VS Code** （フロントエンド統合開発環境）
+- **バージョン**: 1.50以上
+- **ダウンロード**: [https://code.visualstudio.com/](https://code.visualstudio.com/)
+- **役割**: ソースコード編集、デバッグ、ビルド実行
+
+#### 2. **PlatformIO IDE** （VS Code拡張機能）
+- **バージョン**: 3.0以上
+- **インストール**: VS Code内の拡張機能マーケットから「PlatformIO IDE」を検索して導入
+- **役割**: 
+  - ファームウェアのビルド・コンパイル
+  - M5Stack CoreS3への書き込み
+  - シリアルモニター（ログ表示・デバッグ）
+  - 自動ツールチェーンダウンロード（初回のみ10-20分）
+
+#### 3. **Python 3.8以上** （PCクライアント実行用）
+- **ダウンロード**: [https://www.python.org/](https://www.python.org/)
+- **確認**: `python --version` コマンドで確認
+- **役割**: 
+  - PCクライアントアプリケーション（tools/pc_client/）の実行
+  - UDP・シリアル通信でロボットを外部制御
+  - ログ送受信・可視化
+
+#### 4. **Git** （バージョン管理）
+- **ダウンロード**: [https://git-scm.com/](https://git-scm.com/)
+- **確認**: `git --version` コマンドで確認
+- **役割**: ソースコード管理・バージョン追跡
+
+### プロジェクト関連の依存ライブラリ
+
+#### ESp32開発ボード用フレームワーク
+- **Arduino Framework** （ESP32用）
+  - M5Stack CoreS3は Arduino IDE互換
+  - PlatformIOが自動でダウンロード・セットアップ
+
+#### ファームウェア内組み込みライブラリ
+- **M5Core2/M5CoreS3対応ライブラリ**
+  - 画面制御・タッチ入力・GPIO操作
+  - PlatformIO自動取得（platformio.ini）
+- **MPU6886_AHRS** （本プロジェクト内）
+  - IMU（加速度・ジャイロ）処理
+  - Madgwick's AHRS実装
+
+#### PCクライアント依存ライブラリ（Python）
+詳細は [tools/pc_client/requirements.txt](tools/pc_client/requirements.txt) を参照
+- **pygame** : グラフィカルUI・ゲーム風操作パネル
+- **pyserial** : シリアル通信
+- **その他**: UDP通信用ライブラリ等
+
+### セットアップ手順
+
+#### A. 開発ボード（VS Code + PlatformIO）のセットアップ
+
+**ステップ1: VS Codeをインストール**
+```bash
+# Windows: MSIインストーラーから、またはスクリーンショット参照
+# macOS: brew install --cask visual-studio-code
+# Linux: スナップパッケージ or 公式リポジトリから
+```
+
+**ステップ2: PlatformIOを拡張機能から導入**
+1. VS Codeを起動
+2. 左側のアイコン「拡張機能」をクリック（四角が4つのマーク）
+3. 検索窓に `PlatformIO` と入力
+4. 「PlatformIO IDE」（公式、大量ダウンロード）をインストール  
+5. VS Codeをすべて終了して再起動
+6. 初回のみツールチェーンの自動ダウンロードが走ります（15-25分程度）
+
+**ステップ3: プロジェクトを開く**
+1. VS Codeで「ファイル」→「フォルダーを開く」
+2. ZT-rovate-BP08Aプロジェクトフォルダを指定
+3. 左下に PlatformIO アイコンが表示されればセットアップ完了
+
+**ステップ4: M5Stack CoreS3をUSBで接続**
+- Type-C USBケーブルでパソコンに接続
+- デバイスマネージャー or `pio device list` で認識確認
+
+#### B. PCクライアント（Python）のセットアップ
+
+**ステップ1: Python環境の準備**
+```bash
+# Pythonインストール確認
+python --version  # 3.8以上
+
+# 仮想環境作成（推奨）
+cd tools/pc_client
+python -m venv venv
+
+# 仮想環境有効化
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+```
+
+**ステップ2: 依存ライブラリのインストール**
+```bash
+pip install -r requirements.txt
+```
+
+**ステップ3: PCクライアントを実行**
+```bash
+# シリアル制御（テキスト）
+python serialcontrol.py
+
+# シリアル制御（バイナリ）
+python serialcontrol_binary.py
+
+# UDP制御
+python udpcontrol.py
+```
+
+### AI支援コーディング（GitHub Copilot等）
+
+本プロジェクトの開発効率向上のため、 **GitHub Copilot** などのAIコーディング支援ツールの活用を推奨します。
+
+#### GitHub Copilotとは
+
+**GitHub Copilot** は、OpenAIの大規模言語モデル（GPT）をベースとしたAI駆動型コード補完ツールです。VS Codeに拡張機能として導入でき、以下の特徴があります：
+
+- 🤖 **コンテキスト認識補完** : ファイルの既存コードから文脈を読み取り、次のコード行を自動提案
+- 💡 **関数・クラス生成** : コメント（プロンプト）から関数やクラスのボイラープレートを自動生成
+- 🔍 **エラー対応** : 既知のバグパターンから警告や修正提案
+- 📚 **複数言語対応** : C++、Python、JavaScript、JSON等、本プロジェクトで使用するすべての言語に対応
+- 🚀 **開発速度向上** : 定型処理・API呼び出し・テストコード等を高速入力
+
+#### インストール手順
+
+**ステップ1: GitHub Copilotのアカウント準備**
+1. [github.com](https://github.com) でGitHubアカウントを作成（無料）
+2. [GitHub Copilot](https://github.com/features/copilot) のページから、60日間無料トライアル or サブスクリプション登録
+   - 学生・教育機関は無料プランあり
+   - 個人開発者は月額10ドル程度
+
+**ステップ2: VS Code拡張機能をインストール**
+1. VS Codeを起動
+2. 左側の「拡張機能」をクリック
+3. 検索窓に `GitHub Copilot` と入力
+4. 公式の「GitHub Copilot」拡張機能をインストール
+5. VS Codeを再起動
+6. GitHubアカウントでログイン（ブラウザで認証画面が開きます）
+
+**ステップ3: Copilotチャット（高度な機能）の有効化**
+1. 同じく拡張機能から「GitHub Copilot Chat」もインストール（オプション）
+2. コマンドパレット（Ctrl+Shift+P）から「Chat: Open」を実行
+3. サイドバーにチャットウィンドウが表示される
+
+#### 基本的な使い方
+
+##### 1. **インライン補完（自動提案）**
+
+コード入力時に自動でコード案が灰色で表示されます：
+```cpp
+// src/App/AppMotor/AppMotor.cpp のサンプル
+
+void AppMotor::handleButtonPress() {
+    // [Copilotが自動提案]
+    // motor_speed = 255;
+    // delay(100);
+    // motor_speed = 0;
+}
+
+// キー: [Tab] で提案を受け入れ、[Esc] で拒否
+```
+
+##### 2. **コメント駆動開発（Prompt-based）**
+
+コメントを書いて、Copilot に実装させる：
+```cpp
+// Create a function that converts servo angle (0-180) to PWM value (500-2500)
+// [Ctrl+Shift+A] もしくは自動提案を受け入れて実装
+int servoAngleToPWM(int angle) {
+    // Copilot実装例:
+    // return 500 + (angle * 2000 / 180);
+}
+```
+
+##### 3. **Copilot Chatでの質問・会話コーディング**
+
+左側パネルの「Chat」アイコン（❤️ アイコン）をクリック：
+
+```
+【Q】M5Stack CoreS3でI2C通信するサンプルコードをください
+【A】Wire.beginTransmission(0x68);
+    Wire.write(0x3B); // レジスタアドレス
+    Wire.endTransmission();
+    Wire.requestFrom(0x68, 6);
+    ...
+```
+
+**チャット活用例：**
+
+| 用途 | プロンプト例 |
+|------|------------|
+| **関数実装** | "M5Stack CoreS3の加速度センサーからX軸値を読み取る関数を書いて" |
+| **バグ修正** | "このコードがコンパイルエラーになります。[コード貼り付け]原因と修正方法は？" |
+| **リファクタリング** | "このC++コード を簡潔にしてください" |
+| **ドキュメント** | "このクラスの説明コメント（Doxygen形式）を生成して" |
+| **テストコード** | "このPython関数のユニットテストを書いてください" |
+| **アーキテクチャ** | "M5Stack で複数のI2Cデバイスを効率よく管理する設計パターンは？" |
+
+#### 本プロジェクトでの推奨活用法
+
+##### C++開発（ファームウェア開発）での活用
+
+1. **新しいApp の実装**
+   ```cpp
+   // AppTemplateをベースに、Copilot チャットで：
+   // "AppMotorのサーボコントロール機能を実装するにはどうしたらいい？"
+   // → ServoControllerクラスの設計提案が返ってくる
+   ```
+
+2. **IMU・センサー処理**
+   ```cpp
+   // "MPU6886から角速度を読み込んでジャイロドリフト補正するコードは？"
+   // → Madgwick AHRSの実装例が提案される
+   ```
+
+3. **UI部品追加**
+   - 新しいButtonやSliderの実装時に、既存コードパターンから自動生成
+
+##### Python開発（PCクライアント）での活用
+
+1. **UDP/シリアル通信機能**
+   ```python
+   # "UDP通信でM5Stackにサーボ角度を送信するコードをください"
+   # → socketライブラリを使った実装が自動生成
+   ```
+
+2. **データ処理・可視化**
+   ```python
+   # "受信したセンサーデータをCSVに保存して、グラフで表示するコードは？"
+   # → pandasやmatplotlibの活用例が生成される
+   ```
+
+3. **テストスクリプト**
+   - serialcontrol.py の単体テストコード自動生成
+
+#### ベストプラクティス・注意点
+
+| 項目 | 説明 |
+|------|------|
+| **詳細なプロンプト** | 「関数を書いて」より「ESP32のI2C 7-bit アドレスで0x68のデバイスに0x3Bレジスタから6バイト読み込む関数を書いて」が精度高い |
+| **既存コード参照** | ファイルを開いた状態でChatを使用すると、文脈认識が向上（`#include`や`using namespace`をコピペできる） |
+| **生成コードの検証** | Copilot出力は100%正確ではない。データシート確認・テスト実行は必須 |
+| **セキュリティ** | コメント・変数名に機密情報（WiFi パスワード等）を含めない |
+| **ライセンス** | 生成コード（MIT LicenseAのこのプロジェクト）の利用は原則OK。ただし、商用利用時は利用規約確認 |
+
+#### よくある質問
+
+**Q: Copilot は完璧なコードを生成しますか？**
+A: いいえ。特に複雑なロジック・プロジェクト固有の処理では、提案内容を必ず確認・修正してください。補助ツールと考えてください。
+
+**Q: 無料で使えますか？**
+A: 基本は有料（月額$10）ですが、学生・オープンソースプロジェクト開発者は無料。60日間の無料トライアルもあります。
+
+**Q: ローカル環境対応ですか？**
+A: VS Code内で動作します。データはGitHub/Microsoftサーバーに送信されます。機密データの送信を避けたい場合は、Copilot Local（ベータ）の検討を。
+
+**Q: 他のツール（Codeium, Tabnine等）はどう？**
+A: 代替ツールもあります。本プロジェクトでは GitHub Copilot推奨ですが、自由に選択可能です。
+
+#### チャットコーディング ワークフロー例
+
+```
+1. [概要設計] Copilot Chat で「M5Stack CoreS3でロボット制御アプリのアーキテクチャを設計」
+    ↓
+2. [スケルトン生成] 提案されたクラス構成を AppManager/AppTemplate をベースに作成
+    ↓
+3. [関数実装] コメント駆動 → Copilot の インライン補完/Chat で実装
+    ↓
+4. [エラー修正] コンパイルエラーをChatに貼り付け → 修正提案を受ける
+    ↓
+5. [テスト] テストコード自動生成 → 実行・デバッグ
+    ↓
+6. [ドキュメント] 関数コメント・READMEも Copilot で自動生成（確認必須）
+```
+
+---
+
+### ビルド・デプロイ方法
+
+#### ファームウェアのビルド（ハードウェアに書き込み）
+
+**方法1: VS Code UI からの操作（推奨）**
+1. PlatformIO アイコンをクリック
+2. 「PROJECT TASKS」セクション内の「Build」をクリック
+   - コンパイルが実行される
+   - エラーがあれば「PROBLEMS」タブに表示
+3. ビルド成功後、「Upload」をクリック
+   - M5Stack CoreS3にファームウェアが書き込まれる
+   - 完了後、デバイスが自動リセット
+
+**方法2: ターミナルコマンド**
+```bash
+# ビルドのみ
+pio run
+
+# ビルド + 書き込み
+pio run --target upload
+
+# ポート指定（複数デバイス接続時）
+pio run --target upload --upload-port COM3  # Windows
+pio run --target upload --upload-port /dev/ttyUSB0  # Linux
+```
+
+**方法3: シリアルモニターで動作確認**
+```bash
+# ターミナルからシリアルモニター開始
+pio device monitor --port COM3 --baud 115200  # Windows例
+
+# VS Code内: PlatformIO サイドバー → Serial Monitor
+```
+
+### トラブルシューティング
+
+| 問題 | 原因・解決方法 |
+|------|---------------|
+| **「PlatformIO not found」エラー** | VS Codeの再起動後、拡張機能が完全に有効化されていない。再度再起動してください。 |
+| **「ボードが認識されない」** | ：USB接続確認・ドライバインストール確認（Windows）。コマンド `pio device list` でポート確認。 |
+| **ビルドエラー「undefined reference」** | ライブラリが正しく読み込まれていない。platformio.ini の lib_deps を確認し、キャッシュをクリア（`pio run --target clean`） |
+| **シリアルモニター接続できない** | ボーレート設定 `--baud 115200` 確認。他のアプリがシリアルポート使用中でないか確認。 |
+| **Python実行時「ModuleNotFoundError」** | 仮想環境有効化・requirements.txt からの再インストール。`pip list` で確認。 |
+| **M5Stack CoreS3画面が反応しない** | デバイスが書き込み制限モード（DFU）の可能性。リセットボタン（背面）を3秒押してリセット。 |
+
+### 開発ワークフロー例
+
+```
+1. [コード編集] src/ 内の機能を編集
+    ↓
+2. [ビルド] PlatformIO: Build実行
+    ↓
+3. [書き込み] USB接続状態で Upload 実行
+    ↓
+4. [動作確認] Serial Monitor でログ確認
+    ↓
+5. デバッグが必要なら1に戻る
+    ↓
+6. 完成後、PCクライアントで外部制御テスト（オプション）
+```
+
+---
+
 ## 通信仕様・プロトコル
 
 本プロジェクトは以下の通信方式に対応しています：
