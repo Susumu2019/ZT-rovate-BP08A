@@ -1,16 +1,17 @@
 # rovate_Bipedal_TYPE-A
 
-最終更新日: 2026年2月1日
+最終更新日: 2026年2月16日  
+対応バージョン: v1.0.0
 
 <img src="lib/rovate_240_240.png" width="25%" alt="rovate logo">
 
 **rovate** は **zeatec** が開発するロボットシリーズのブランド名です。
-このプロジェクトは、 **rovate** の二足歩行ロボット **Bipedal Type-A** コントローラー用マイコンアプリケーションです。
+このプロジェクトは、**rovate Bipedal Type-A** 二足歩行ロボット用のM5Stack CoreS3コントローラー・アプリケーションです。
 
-M5Stack CoreS3をベースに、複数のアプリ（画面）で直感的にロボットを制御できるシステムになっています。
+---
 
+## 主な特徴
 
-### 主な特徴
 - タッチUIによる直感操作（ボタン・スライダー・スイッチ）
 - シリアル通信（テキスト/バイナリ/JSON）・UDP通信対応
 - PCクライアント（Python/pygame, UDP/シリアル）で外部制御・可視化
@@ -19,35 +20,69 @@ M5Stack CoreS3をベースに、複数のアプリ（画面）で直感的にロ
 
 ---
 
-## 📑 目次
+## ディレクトリ構成
 
-- [通信仕様・プロトコル](#通信仕様プロトコル)
-- [このプロジェクトについて](#このプロジェクトについて)
-- [ピンアサイン・外部接続・I2C回路構成について](#ピンアサイン外部接続i2c回路構成について)
-- [クイックスタート（初心者向け）](#クイックスタート初心者向け)
-- [プロジェクト構成（全ファイル一覧）](#プロジェクト構成全ファイル一覧)
-- [学習の進め方（初心者向けロードマップ）](#学習の進め方初心者向けロードマップ)
-- [重要なドキュメント（必読）](#重要なドキュメント必読)
-- [よくある質問（FAQ）](#よくある質問faq)
-- [カスタマイズのヒント](#カスタマイズのヒント)
-- [トラブルシューティング](#トラブルシューティング)
-- [さらに学ぶには](#さらに学ぶには)
-- [ライセンス](#ライセンス)
-- [作者](#作者)
-- [バージョン情報](#バージョン情報)
-- [クイックリファレンス](#クイックリファレンス)
+- `src/` : メインソースコード（アプリ・UI・システム・タイマー等）
+- `lib/` : 外部ライブラリ（例: MPU6886_AHRS）
+- `include/` : ヘッダファイル
+- `tools/pc_client/` : PC用クライアント（Python）
+- `docs/` : ドキュメント
 
 ---
 
----
-
-
-<h2 id="通信仕様プロトコル">🔗 通信仕様・プロトコル</h2>
+## 通信仕様・プロトコル
 
 本プロジェクトは以下の通信方式に対応しています：
 
 - **シリアル通信（テキスト/JSON/バイナリ）**
-    - 詳細: [README_serial_command.md](README_serial_command.md)
+    - 詳細: [src/system/comm/README_serial_command.md](src/system/comm/README_serial_command.md)
+- **UDP通信**
+    - 詳細: [src/system/comm/README_wifi_command.md](src/system/comm/README_wifi_command.md)
+
+---
+
+## クイックスタート
+
+1. M5Stack CoreS3に書き込み
+2. PCクライアント（tools/pc_client/）で接続
+3. タッチUIでロボットを操作
+
+---
+
+## 参考・詳細ドキュメント
+
+- [src/README.md](src/README.md) : ソース構成・役割
+- [lib/MPU6886_AHRS/README.md](lib/MPU6886_AHRS/README.md) : IMUライブラリ
+- [src/UI/README.md](src/UI/README.md) : UI部品
+- [src/system/README.md](src/system/README.md) : システム基盤
+
+---
+
+## 注意事項
+
+- グローバル変数や初期化処理はsystem配下にまとめる
+- 新規アプリ追加時はAppTemplateを参考に
+- 詳細は各README参照
+
+---
+
+## ライセンス
+
+MIT License
+
+---
+
+## 作者
+
+zeatec
+
+---
+
+## バージョン情報
+
+- v1.0.0 (2026/02/16) 初版公開
+
+---
 - **UDP通信（PC⇔ロボット）**
     - 詳細: [src/App/AppWifi/README.md](src/App/AppWifi/README.md), [tools/pc_client/README.md](tools/pc_client/README.md)
 

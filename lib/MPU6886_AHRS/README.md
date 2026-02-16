@@ -1,53 +1,57 @@
-# MPU6886 AHRS ライブラリ
+# MPU6886_AHRS ライブラリ
 
-最終更新日: 2026年2月1日
+最終更新日: 2026年2月16日  
+対応バージョン: v1.0.0
 
-Madgwick方向フィルタを搭載したMPU6886 6軸IMUの移植可能なライブラリです。
+Madgwickフィルタ搭載のMPU6886 6軸IMU用ライブラリです。
 
-## 機能
+## 主な機能
 
-- ✅ MPU6886センサドライバ（加速度計、ジャイロ、温度）
-- ✅ Madgwick AHRS方向フィルタ
-- ✅ 自動ジャイロバイアス校正
-- ✅ リアルタイムdt計算による正確な積分
-- ✅ I2Cバス共有サポート（他のセンサとの併用可）
-- ✅ プラットフォーム非依存（Arduino互換）
-- ✅ 使いやすい統一API
+- MPU6886センサドライバ（加速度・ジャイロ・温度）
+- Madgwick AHRS方向フィルタ
+- 自動ジャイロバイアス校正
+- リアルタイムdt計算による正確な積分
+- I2Cバス共有サポート
+- プラットフォーム非依存（Arduino互換）
+- 統一API
 
 ## ファイル構成
 
-- `MPU6886.h/cpp` - 低レベルセンサドライバ
-- `MadgwickAHRS.h/cpp` - 方向フィルタ
-- `MPU6886_AHRS.h/cpp` - 高レベル統一インターフェース
+- `MPU6886.h/cpp` : 低レベルセンサドライバ
+- `MadgwickAHRS.h/cpp` : 方向フィルタ
+- `MPU6886_AHRS.h/cpp` : 高レベル統一インターフェース
 
-## インストール手順
+## インストール・使い方
 
 ### 1. ハードウェア接続
 
-**M5CoreS3SE + MPU6886の接続（PORT.A使用）**
-
 | MPU6886 | M5CoreS3SE | GPIO |
 |---------|-----------|------|
-| VCC | 3.3V | - |
-| GND | GND | - |
-| SDA | PORT.A SDA | GPIO2 |
-| SCL | PORT.A SCL | GPIO1 |
-| INT | GPIO39 | GPIO39 |
+| VCC     | 3.3V      | -    |
+| GND     | GND       | -    |
+| SDA     | PORT.A SDA| GPIO2|
+| SCL     | PORT.A SCL| GPIO1|
+| INT     | GPIO39    | GPIO39|
 
-### 2. ライブラリのインストール
+### 2. PlatformIOでの導入
 
-```bash
-# platformio.iniでlib_depsに追加
-lib_deps = 
-    M5Unified
-    MPU6886_AHRS
+```ini
+lib_deps =
+  M5Unified
+  MPU6886_AHRS
 ```
 
-### 3. プログラムでの初期化
+### 3. サンプルコード
 
 ```cpp
 #include <Wire.h>
 #include "MPU6886_AHRS.h"
+// ...
+```
+
+---
+
+詳細は各ソース・コメント参照。
 
 MPU6886_AHRS imu;
 

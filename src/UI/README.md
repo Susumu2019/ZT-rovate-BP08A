@@ -1,52 +1,36 @@
-## UI（簡潔）
 
-最終更新日: 2026年2月1日
+## UI部品（概要）
 
-このフォルダは再利用可能な画面部品を収めています。各コンポーネントは概ね次のパターンで使います:
+最終更新日: 2026年2月16日  
+対応バージョン: v1.0.0
+
+このフォルダは再利用可能な画面部品（UIコンポーネント）を収めています。
+
+### 基本的な使い方
 
 1. ヘッダを `#include` する
-2. オブジェクトを作る（例: `CoreS3Buttons btn(...)`）
-3. `setup()` で必要な初期化を行う
-4. `loop()` で `update()` を呼び、描画は `draw(canvas)` で行う
+2. オブジェクトを生成（例: `CoreS3Buttons btn(...)`）
+3. `setup()` で初期化
+4. `loop()` で `update()`、描画は `draw(canvas)`
 
-ポイント
-- タッチ情報は `touchManager` を経由して取得するのが基本です
-- ボタン等はシンプルな `PRESS/CLICK/RELEASE` を想定しています
-
-詳しくは各サブフォルダの README を参照してください。
-**何ができる？**
-- 矢印の描画（上下左右）
-- ラベル付きアイコンボックス
-
-**おすすめ度**: ⭐⭐⭐ シンプルで使いやすい
-
-📖 詳細は [`Icon/README.md`](Icon/README.md) へ
+#### ポイント
+- タッチ情報は `touchManager` 経由で取得
+- ボタン等は `PRESS/CLICK/RELEASE` を想定
 
 ---
 
-### 🎚️ SliderBar（スライダー）
-**何ができる？**
-- タッチで値を調整
-- 音量、明るさ、速度などの設定
-- 値変更時のコールバック
+### 主な部品
 
-**おすすめ度**: ⭐⭐ ボタンの次に学ぶと良い
-
-📖 詳細は [`SliderBar/README.md`](SliderBar/README.md) へ
+- [Button/](Button/README.md) : ボタンUI
+- [SliderBar/](SliderBar/README.md) : スライダーUI
+- [Switch/](Switch/README.md) : トグルスイッチUI
+- [Icon/](Icon/README.md) : アイコン描画
 
 ---
 
-### 🔄 Switch（トグルスイッチ）
-**何ができる？**
-- ON/OFF の切り替え
-- 滑らかなアニメーション
-- WiFi、LED などの制御に便利
+### 参考
 
-**おすすめ度**: ⭐⭐ 設定画面によく使う
-
-📖 詳細は [`Switch/README.md`](Switch/README.md) へ
-
----
+- 詳細は各サブフォルダのREADME参照
 
 ### 📱 TopBar（上部バー）
 **何ができる？**
