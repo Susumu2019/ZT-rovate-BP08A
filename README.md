@@ -1,4 +1,4 @@
-# rovate_Bipedal_TYPE-A
+# ZT-rovate-BP08A
 
 最終更新日: 2026年2月16日
 対応バージョン: v1.0.0
@@ -6,7 +6,7 @@
 <img src="lib/rovate_240_240.png" width="25%" alt="rovate logo">
 
 **rovate** は **zeatec** が開発するロボットシリーズのブランド名です。
-このプロジェクトは、**rovate Bipedal Type-A** 二足歩行ロボット用のM5Stack CoreS3コントローラー・アプリケーションです。
+このプロジェクトは、**ZT-rovate-BP08A** 二足歩行ロボット用のM5Stack CoreS3コントローラー・アプリケーションです。
 
 ---
 
@@ -93,7 +93,7 @@ zeatec
 
 ### 何ができるの？
 
-このプロジェクトは、rovate Bipedal Type-Aの制御に以下のような機能を備えています：
+このプロジェクトは、ZT-rovate-BP08Aの制御に以下のような機能を備えています：
 
 - 📱 **複数の制御画面** でロボットの各機能を操作
 - 🖱️ **タッチ操作** に対応したUI部品（ボタン、スライダー、スイッチ）
@@ -104,7 +104,7 @@ zeatec
 
 ### 対象ハードウェア
 
-- **M5Stack CoreS3** (SE含む) - rovate Bipedal Type-A コントローラー
+- **M5Stack CoreS3** (SE含む) - ZT-rovate-BP08A コントローラー
 - タッチスクリーン対応 - ロボット制御用UI
 - ESP32ベース - 高速処理対応
 - **I2C通信機能** - モーター制御、センサー接続用
@@ -217,7 +217,7 @@ LEDの本数やピン番号は `src/main.cpp` の `#define WS2812_PIN 6` およ�
 ### ステップ2: プロジェクトを開く
 
 1. VS Codeで「ファイル」→「フォルダーを開く」
-2. このプロジェクトのフォルダ（`rovate_Bipedal_TYPE-A`）を選択
+2. このプロジェクトのフォルダ（`ZT-rovate-BP08A`）を選択
 3. 左下に「PlatformIO」のアイコンが表示されればOK
 
 ---
@@ -226,33 +226,6 @@ LEDの本数やピン番号は `src/main.cpp` の `#define WS2812_PIN 6` およ�
 
 #### 3-1. M5Stack CoreS3を接続
 
-USBケーブルでパソコンとM5Stackを接続します。
-
-#### 3-2. ビルド（コンパイル）
-
-1. 画面下部の「✓」アイコンをクリック（Build）
-2. 初回は時間がかかります（ライブラリをダウンロード）
-3. 「SUCCESS」と表示されればOK
-
-#### 3-3. アップロード（書き込み）
-
-1. 画面下部の「→」アイコンをクリック（Upload）
-2. M5Stackに書き込まれます
-3. 自動的にプログラムが起動します
-
-#### 3-4. 動作確認
-
-- ホーム画面にアプリアイコンが表示される
-- アイコンをタッチするとアプリが起動
-- 画面下部のボタンBでホーム画面に戻る
-
-🎉 **成功！** プログラムが動いたら、次はカスタマイズしてみましょう。
-
----
-
-
-
-<h2 id="プロジェクト構成全ファイル一覧">📂 プロジェクト構成（全ファイル一覧）</h2>
 
 ```
 .git/
@@ -261,7 +234,7 @@ USBケーブルでパソコンとM5Stackを接続します。
 .pio.zip
 .venv/
 .vscode/
-datasheet/
+    │   │   ├── SliderBar.cpp
     └── M5CoreS3-SE_ピンアサイン.jpg
 docs/
     └── TOUCH_ARCHITECTURE.md
@@ -378,6 +351,33 @@ src/
     │   ├── SliderBar/
     │   │   ├── README.md
     │   │   ├── SliderBar.cpp
+    │   │   └── SliderBar.h
+    │   ├── Switch/
+    │   │   ├── README.md
+    │   │   ├── ToggleSwitch.cpp
+    │   │   └── ToggleSwitch.h
+    │   └── TopBar/
+    │       ├── README.md
+    │       ├── TopBar.cpp
+    │       └── TopBar.h
+test/
+    └── README
+tools/
+    └── pc_client/
+            ├── main.py
+            ├── pose_memory.json
+            ├── README.md
+            ├── requirements.txt
+            ├── RunUdpControl.bat
+            ├── serialcontrol.bat
+            ├── serialcontrol.py
+            ├── serialcontrol_binary.bat
+            ├── serialcontrol_binary_debug.bat
+            ├── serialcontrol_text.bat
+            ├── udpcontrol.py
+            ├── 受信したバイナリデータをテキストに変換して表示.py
+            └── 受信したバイナリデータを表示.py
+```
     │   │   └── SliderBar.h
     │   ├── Switch/
     │   │   ├── README.md

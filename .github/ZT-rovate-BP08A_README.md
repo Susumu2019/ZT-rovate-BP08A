@@ -1,6 +1,6 @@
 # ZT-rovate-BP08A
 
-このリポジトリは、rovate_Bipedal_TYPE-A プロジェクトのGitHub公開用です。
+このリポジトリは、ZT-rovate-BP08A プロジェクトのGitHub公開用です。
 
 ## 概要
 - M5Stack CoreS3用二足歩行ロボットコントローラー
