@@ -30,6 +30,45 @@
 
 ---
 
+## 通信テストの解説
+
+詳細な解説は、通信関係の以下のREADMEファイルを参照してください。**クリックですぐに開きます：**
+
+- 📡 **[シリアル通信（テキスト・JSON）のHello World例](src/system/comm/README_serial_command.md)**
+  - PowerShellでの簡単なサーボ制御例
+  - PCクライアント（serialcontrol.py）を使った対話的テスト
+
+- 📋 **[シリアル通信（バイナリモード）のHello World例](src/system/comm/README_serial_command.md#hello-worldwindowsでバイナリ通信をテストする)**
+  - CRC16-CCITT計算を含むPythonスクリプト例
+  - PING・サーボ制御・全サーボ設定の実装
+
+- 📡 **[WiFi/UDP通信のHello World例](src/system/comm/README_wifi_command.md#hello-worldwindowsでudp通信をテストする)**
+  - GUIツール（udpcontrol.py）での最も簡単なテスト
+  - Pythonソケット通信例・IMU値リアルタイム受信
+
+### 推奨テスト手順
+
+1. **デバイス接続** : M5Stack CoreS3をUSBで接続
+2. **上記のいずれかのREADMEを開く** : クリックで詳細なHello World例を確認
+3. **簡単な事例実行** : 記載されているスクリプトをコピー・実行
+4. **動作確認** : サーボが動いたり、センサ値が表示されることを確認
+
+### 💡 注意: AI支援ツール活用の強い推奨
+
+通信テストが正常に動作することを確認した後、**本格的なカスタマイズやアプリ開発を行う場合は、GitHub Copilot等のAI支援コーディングツールの利用を強く推奨します。**
+
+**なぜ推奨するのか：**
+- 🚀 **開発効率5～10倍向上** : ボイラープレート・通信処理・UIロジックの自動生成
+- 🎯 **コンテキスト認識** : 既存コード（AppManager、I2C通信等）を理解した補完提案
+- 🐛 **デバッグ高速化** : コンパイルエラーやロジックバグの原因・解決策を即座に提示
+- 📚 **学習効果** : 提案されたコードから、M5StackやESP32の最適な実装パターンを学習
+- 🔧 **複数言語対応** : C++（ファームウェア）・Python（PCクライアント）・JSONすべてに対応
+
+
+詳細は下記の「[AI支援コーディング](#ai支援コーディングgithub-copilot等)」セクションを参照してください。
+
+---
+
 ## 開発環境
 
 ### システム要件
