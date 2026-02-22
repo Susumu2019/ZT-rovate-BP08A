@@ -5,3 +5,9 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+# ローカル設定ファイル（機密情報含む - Git除外）
+include/config.h
+
+# Python 仮想環境
+.venv/
+venv/

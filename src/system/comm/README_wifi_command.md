@@ -2,6 +2,91 @@
 
 最終更新日: 2026年2月1日
 
+---
+
+## 設定手順（初回セットアップ）
+
+WiFi/UDP通信を使用する前の設定ステップです。
+
+### ⚠️ 重要：config.h の作成
+
+**config.h にはWiFiのSSIDとパスワード等の機密情報が含まれるため、リポジトリの .gitignore で除外されています。**
+
+以下の手順で個別の `config.h` ファイルを作成してください：
+
+**ステップ0: config.h ファイルの準備**
+
+1. [include/config.h.template](../../../../include/config.h.template) を `include/config.h` にコピー：
+   ```bash
+   cd include
+   copy config.h.template config.h
+   ```
+
+2. または、VS Code で config.h.template を右クリック → 「コピー」して include/ フォルダに貼り付け、ファイル名を `config.h` に変更
+
+### ステップ1: WiFi接続情報の設定
+
+作成した `include/config.h` ファイルを編集して、接続先WiFiネットワークを設定します：
+
+```cpp
+// WiFi (STA) 接続情報
+constexpr const char* WIFI_SSID = "YOUR_WIFI_SSID";        // ← 接続先WiFiのSSIDに変更
+constexpr const char* WIFI_PASSWORD = "YOUR_PASSWORD";     // ← WiFiパスワードに変更
+```
+
+**設定例：**
+```cpp
+constexpr const char* WIFI_SSID = "home-wifi";
+constexpr const char* WIFI_PASSWORD = "mypassword123";
+```
+
+⚠️ **注意：** `config.h` には機密情報が含まれるため、絶対に GitHub にコミットしないでください。`.gitignore` で除外されているので自動的には含まれませんが、確認してください。
+
+### ステップ2: UDP送信先の確認・設定
+
+同じく [include/config.h](../../../../include/config.h) で、UDP通信先（PC側）のIPアドレスを設定します（デフォルトは 192.168.0.100）：
+
+```cpp
+// UDP 送信先（PC側のIPアドレス）
+static constexpr uint8_t UDP_TARGET_IP0 = 192;   // 第1オクテット
+static constexpr uint8_t UDP_TARGET_IP1 = 168;   // 第2オクテット
+static constexpr uint8_t UDP_TARGET_IP2 = 0;     // 第3オクテット
+static constexpr uint8_t UDP_TARGET_IP3 = 100;   // 第4オクテット
+constexpr uint16_t UDP_TARGET_PORT = 5000;       // UDPポート
+```
+
+**設定例：PC IPアドレスが 192.168.1.50 の場合**
+```cpp
+static constexpr uint8_t UDP_TARGET_IP0 = 192;
+static constexpr uint8_t UDP_TARGET_IP1 = 168;
+static constexpr uint8_t UDP_TARGET_IP2 = 1;
+static constexpr uint8_t UDP_TARGET_IP3 = 50;
+```
+
+**PCのIPアドレス確認方法（Windows）：**
+```powershell
+ipconfig
+# または
+ipconfig | findstr "IPv4"
+```
+
+### ステップ3: ファームウェア書き込み
+
+1. [include/config.h](../../../../include/config.h) を保存
+2. VS Code の PlatformIO パネルで「Build」をクリック
+3. 「Upload」をクリックしてM5Stack CoreS3に書き込み
+4. デバイスが再起動し、WiFiに自動接続
+
+### ステップ4: WiFi接続状態の確認
+
+デバイスの「WiFi」アプリ画面でWiFi接続状態を確認：
+- 接続SSID名
+- ロボット側のIPアドレス
+- 電波強度（RSSI）
+- UDP接続状態（PC接続済み/未接続）
+
+---
+
 ### 🏷 役割
 WiFi接続・UDP通信の状態表示や制御を行うアプリ画面です。
 

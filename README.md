@@ -196,6 +196,143 @@ python serialcontrol_binary.py
 python udpcontrol.py
 ```
 
+#### C. 初期設定（WiFi・シリアル通信）
+
+ロボットを実際に制御する前に、WiFi接続とシリアル通信の設定ファイルを作成する必要があります。
+
+##### ⚠️ 重要：config.h の作成
+
+**config.h にはWiFiのSSIDとパスワードなど機密情報が含まれるため、.gitignore で除外されており、リポジトリに含まれていません。**
+
+以下の手順で個別の `config.h` ファイルを作成してください：
+
+**ステップ1: テンプレートファイルをコピー**
+```bash
+# Windowsのコマンドプロンプト or PowerShell で実行
+cd include
+copy config.h.template config.h
+
+# または macOS/Linux:
+cp config.h.template config.h
+```
+
+または VS Code で：
+1. [include/config.h.template](include/config.h.template) をエディターで開く
+2. 右クリック → 「コピー」
+3. include/フォルダ内に貼り付け
+4. ファイル名を `config.h` に変更
+
+**ステップ2: WiFi設定をカスタマイズ**
+
+作成した `include/config.h` を編集して、接続したいWiFiネットワークのSSIDとパスワードを設定します：
+
+```cpp
+// WiFi (STA) 接続情報
+constexpr const char* WIFI_SSID = "YOUR_WIFI_SSID";        // ← WiFiのSSID名に置き換え
+constexpr const char* WIFI_PASSWORD = "YOUR_PASSWORD";     // ← WiFiのパスワードに置き換え
+```
+
+**設定例：自宅のWiFi "MyHome-2.4G" に接続する場合**
+```cpp
+constexpr const char* WIFI_SSID = "MyHome-2.4G";
+constexpr const char* WIFI_PASSWORD = "mypassword123";
+```
+
+##### WiFi設定
+
+**2. UDP送信先アドレスの設定（オプション）**
+
+PCとロボットがWiFiで通信する場合、必要に応じてUDP送信先IPアドレスを設定します：
+
+```cpp
+// UDP 送信先（PC側のIPアドレス）
+static constexpr uint8_t UDP_TARGET_IP0 = 192;   // IPアドレスの第1オクテット
+static constexpr uint8_t UDP_TARGET_IP1 = 168;   // IPアドレスの第2オクテット
+static constexpr uint8_t UDP_TARGET_IP2 = 0;     // IPアドレスの第3オクテット
+static constexpr uint8_t UDP_TARGET_IP3 = 100;   // IPアドレスの第4オクテット（192.168.0.100）
+constexpr uint16_t UDP_TARGET_PORT = 5000;       // UDP送受信ポート番号
+```
+
+**例：PCのIPアドレスが 192.168.1.50 の場合**
+```cpp
+static constexpr uint8_t UDP_TARGET_IP0 = 192;
+static constexpr uint8_t UDP_TARGET_IP1 = 168;
+static constexpr uint8_t UDP_TARGET_IP2 = 1;
+static constexpr uint8_t UDP_TARGET_IP3 = 50;
+```
+
+**3. 設定後の手順**
+
+- `config.h` を保存する
+- VS Codeの PlatformIO パネルで「Build」をクリックしてコンパイル
+- 「Upload」をクリックしてM5Stack CoreS3に書き込み
+- デバイスが再起動し、新しいWiFi設定で自動接続
+
+**トラブルシューティング**
+- WiFi接続できない場合：[src/system/comm/README_wifi_command.md](src/system/comm/README_wifi_command.md) の AppWifi 画面でSSID・電波強度を確認してください
+- UDPポート5000が使用中の場合：別のポート番号（例：5001, 5555）に変更してください
+
+---
+
+##### シリアル通信設定
+
+**1. ボーレート確認**
+
+デフォルトのボーレートは 921600 bps に設定されています。変更が必要な場合は `config.h` を編集：
+
+```cpp
+// シリアル送信設定
+static constexpr uint32_t SERIAL_BAUD = 921600;  // ボーレート（bps）
+```
+
+**2. COMポート確認（Windows）**
+
+PCに接続したM5Stack CoreS3のCOMポート番号を確認：
+
+**方法A: デバイスマネージャで確認**
+1. Windowsスタートメニューで「デバイスマネージャ」と検索
+2. 「デバイスマネージャー」を起動
+3. 「ポート（COM と LPT）」を展開
+4. 「USB Serial Device (COMx)」を確認（x = ポート番号、通常 COM3～COM10）
+
+**方法B: PlatformIOから確認**
+1. VS Codeで PlatformIO パネルを開く
+2. 左側メニューの「Devices」をクリック
+3. 接続しているM5Stack CoreS3の情報からCOMポートを確認
+
+**3. シリアル通信テスト**
+
+接続確認後、以下のコマンドで簡単に動作テストできます：
+
+**テキストモード（JSON命令）での制御：**
+```bash
+# PowerShellで実行（例：COM5を使用）
+$port = New-Object System.IO.Ports.SerialPort COM5,921600
+$port.Open()
+$port.WriteLine('p')
+Start-Sleep -Milliseconds 100
+Write-Host $port.ReadLine()
+$port.Close()
+```
+
+**Python スクリプトでの対話的テスト（推奨）：**
+```bash
+cd tools/pc_client
+python serialcontrol.py COM5
+```
+
+スクリプトが起動したら、以下のコマンドを入力：
+```
+> p
+pong
+
+> {"cmd": "servo", "pos": [1500,1500,1500,1500,1500,1500,1500,1500]}
+```
+
+詳細は [src/system/comm/README_serial_command.md](src/system/comm/README_serial_command.md) を参照してください。
+
+---
+
 ### AI支援コーディング（GitHub Copilot等）
 
 本プロジェクトの開発効率向上のため、 **GitHub Copilot** などのAIコーディング支援ツールの活用を推奨します。

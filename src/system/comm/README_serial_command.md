@@ -1,7 +1,109 @@
 
 # シリアル通信プロトコル詳細
 
-## テキスト通信（JSON/1文字コマンド）
+最初にシリアル通信で制御を始める場合は、以下の初期設定セクションを参照してください。
+
+---
+
+## 初期設定（セットアップ）
+
+### 概要
+
+M5Stack CoreS3はUSB Type-C でPCに接続され、シリアル通信（RS-232）でロボットのサーボ・センサーを制御・受信できます。
+
+### ⚠️ 重要：config.h の作成
+
+**シリアル通信設定（ボーレート等）は `include/config.h` に保存されています。このファイルは .gitignore で除外されているため、個別に作成する必要があります：**
+
+1. [include/config.h.template](../../../../include/config.h.template) を `include/config.h` にコピー：
+   ```bash
+   cd include
+   copy config.h.template config.h
+   ```
+
+### ステップ1: ボーレート確認
+
+デフォルトのボーレートは **921600 bps** です。変更が必要な場合は `config.h` を編集：
+
+```cpp
+// シリアル送信設定
+static constexpr uint32_t SERIAL_BAUD = 921600;  // ボーレート（bps）
+```
+
+### ステップ2: COMポート確認
+
+**Windows：デバイスマネージャーで確認**
+1. Windowsスタートメニューで「デバイスマネージャ」を検索
+2. 「ポート（COM と LPT）」を展開
+3. M5Stack CoreS3を接続した状態で「USB Serial Device (COMx)」を確認
+   - 例：COM5、COM3 など
+
+**Windows：PowerShellで確認**
+```powershell
+Get-WmiObject Win32_SerialPort | Select-Object Description,DeviceID,Name
+```
+
+**macOS/Linux：ターミナルで確認**
+```bash
+# macOS
+ls /dev/tty.*
+
+# Linux
+ls /dev/ttyUSB* 或いは ls /dev/ttyACM*
+```
+
+### ステップ3: テキスト/バイナリモード選択
+
+2つの通信モードがあります。初期は **テキストモード（JSON）** がおすすめです：
+
+| モード | 特徴 | 推奨用途 |
+|--------|------|---------|
+| **テキスト（JSON）** | 可読性高、デバッグ容易 | 初期開発・動作確認 |
+| **バイナリ** | 高速、通信効率良好 | 本格運用・リアルタイム制御 |
+
+**モード切り替え：**
+1. ロボットの HomeScreen → AppSetup → Mode
+2. TEXT or BINARY を選択
+3. 再起動
+
+### ステップ4: 簡単な接続テスト
+
+PCとロボットがシリアルで通信可能か確認します：
+
+**PowerShellでの簡単テスト（Windows）：**
+```powershell
+$port = New-Object System.IO.Ports.SerialPort COM5,921600
+$port.Open()
+$port.WriteLine('p')
+Start-Sleep -Milliseconds 100
+Write-Host "応答: " $port.ReadLine()
+$port.Close()
+```
+
+期待される出力：
+```
+応答:  pong
+```
+
+**Python スクリプトでの対話的テスト（推奨）：**
+```bash
+# プロジェクトルートに移動
+cd c:\Users\zeate\Documents\PlatformIO\Projects\ZT-rovate-BP08A
+
+# Pythonスクリプトを実行（仮想環境有効化後）
+python tools/pc_client/serialcontrol.py COM5
+```
+
+対話形式でコマンドを入力できます：
+```
+COM5 接続中...
+> p
+pong
+> {"cmd": "ping"}
+{"resp": "pong", "millis": 123456}
+```
+
+---
 
 - 通信方式: UART2 (デフォルト 921600bps)
 - 改行(\r, \n)でコマンド区切り
