@@ -1,7 +1,7 @@
 # ZT-rovate-BP08A
 
 最終更新日: 2026年4月2日
-対応バージョン: v1.0.0
+対応バージョン: v0.9.0
 
 <img src="lib/rovate_240_240.png" width="25%" alt="rovate logo">
 
