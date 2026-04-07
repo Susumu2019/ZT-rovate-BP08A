@@ -404,4 +404,227 @@ python test_binary.py
 
 ---
 
-最終更新: 2026-03-16
+## バイナリ通信による複数サーボ同時制御
+
+複数のサーボを1パケットで同時に制御する方法を説明します。
+
+### パケット構造の詳細（SET_ALL, cmd=0x02）
+
+8本のサーボを1フレームで全部書き換えます。
+
+```
+[AA][55][01][02][seq_lo][seq_hi][11][00][02][pos0_lo][pos0_hi][pos1_lo][pos1_hi]...[pos7_lo][pos7_hi][crc_lo][crc_hi][7E]
+ ↑   ↑   ↑   ↑   ←SEQ (LE)→   ←LEN=17 (LE)→  ↑   ←────── pos[0..7] 各2byte LE ──────→  ←CRC (LE)→   ↑
+SYNC      VER TYPE                              cmd=0x02                                                ETX
+```
+
+| Offset | サイズ | 内容 |
+|--------|--------|------|
+| 0–1    | 2      | SYNC: `AA 55` |
+| 2      | 1      | VER: `01` |
+| 3      | 1      | TYPE: `02`（PCからデバイスへのコマンド） |
+| 4–5    | 2      | SEQ（リトルエンディアン） |
+| 6–7    | 2      | LEN=17（リトルエンディアン） |
+| 8      | 1      | CMD: `02`（SET_ALL_SERVOS） |
+| 9–24   | 16     | pos[0]〜pos[7]（各 uint16 LE） |
+| 25–26  | 2      | CRC16-CCITT（byte[2]〜byte[24]対象、LE） |
+| 27     | 1      | ETX: `7E` |
+
+**合計 28 bytes**
+
+### Pythonによる複数サーボ制御例
+
+以下のコードを `multi_servo_control.py` として保存して実行できます。
+
+```python
+import serial
+import struct
+import time
+
+# ── ヘルパー関数 ──────────────────────────────────────────
+
+def crc16_ccitt(data, poly=0x1021, init=0xFFFF):
+    """CRC16-CCITT計算（VER〜PAYLOAD を対象）"""
+    crc = init
+    for b in data:
+        crc ^= b << 8
+        for _ in range(8):
+            crc = ((crc << 1) ^ poly) if (crc & 0x8000) else (crc << 1)
+            crc &= 0xFFFF
+    return crc
+
+def build_set_all(positions, seq=1):
+    """
+    8本サーボを同時に指定角度に設定するパケットを構築する。
+    positions: サーボ角度のリスト（長さ8、0〜180度、中立=90）
+    """
+    assert len(positions) == 8, "positions は8要素必要"
+    positions = [max(0, min(180, p)) for p in positions]  # クランプ
+
+    # ヘッダ: SYNC(2) + VER(1) + TYPE(1) + SEQ(2) + LEN(2) = 8bytes
+    header = b'\xAA\x55' + struct.pack('<BBHH', 0x01, 0x02, seq, 17)
+    # ペイロード: CMD(1) + pos[0..7] (各uint16 LE = 2bytes) = 17bytes
+    payload = struct.pack('<B' + 'H'*8, 0x02, *positions)
+
+    crc = crc16_ccitt(header[2:] + payload)   # VER〜PAYLOAD を対象
+    return header + payload + struct.pack('<H', crc) + b'\x7E'
+
+def build_set_single(servo_id, angle, seq=1):
+    """
+    1本のサーボを指定角度に設定するパケットを構築する。
+    servo_id: 0〜7, angle: 0〜180度
+    """
+    angle = max(0, min(180, angle))
+    header = b'\xAA\x55' + struct.pack('<BBHH', 0x01, 0x02, seq, 4)
+    payload = struct.pack('<BBH', 0x01, servo_id, angle)
+
+    crc = crc16_ccitt(header[2:] + payload)
+    return header + payload + struct.pack('<H', crc) + b'\x7E'
+
+def build_reset(seq=1):
+    """全サーボを中立位置（90度）にリセットするパケットを構築する。"""
+    header = b'\xAA\x55' + struct.pack('<BBHH', 0x01, 0x02, seq, 1)
+    payload = b'\x03'
+    crc = crc16_ccitt(header[2:] + payload)
+    return header + payload + struct.pack('<H', crc) + b'\x7E'
+
+# ── メイン ────────────────────────────────────────────────
+
+PORT  = 'COM5'    # 環境に合わせて変更
+BAUD  = 921600
+INTERVAL = 0.05   # コマンド間隔（秒）
+
+ser = serial.Serial(PORT, BAUD, timeout=0.5)
+time.sleep(0.5)
+seq = 1
+
+try:
+    # ── 例1: 全8本を一括して任意位置へ ────────────────────
+    print("=== 例1: 全サーボを任意位置へ一括設定 ===")
+    # [servo0=45, servo1=135, servo2=60, servo3=120, servo4=90, servo5=90, servo6=30, servo7=150]
+    target = [45, 135, 60, 120, 90, 90, 30, 150]
+    pkt = build_set_all(target, seq)
+    ser.write(pkt)
+    print(f"送信 (seq={seq}): {target}")
+    seq += 1
+    time.sleep(INTERVAL)
+
+    # ── 例2: 左右対称で動かす ──────────────────────────────
+    print("\n=== 例2: 左右対称ポーズ ===")
+    poses = [
+        [60, 120, 70, 110, 80, 100, 90, 90],   # ポーズA
+        [90,  90, 90,  90, 90,  90, 90, 90],   # 中立
+        [120,  60, 110, 70, 100, 80, 90, 90],  # ポーズB（左右反転）
+    ]
+    for pose in poses:
+        pkt = build_set_all(pose, seq)
+        ser.write(pkt)
+        print(f"  seq={seq}: {pose}")
+        seq += 1
+        time.sleep(0.5)   # ポーズ間は0.5秒待機
+
+    # ── 例3: 個別サーボを順番に動かすウェーブ動作 ─────────
+    print("\n=== 例3: ウェーブ動作（サーボ0〜7を順番に動かす） ===")
+    current = [90] * 8
+    for i in range(8):
+        current[i] = 130
+        pkt = build_set_all(current, seq)
+        ser.write(pkt)
+        print(f"  seq={seq}: servo[{i}]=130")
+        seq += 1
+        time.sleep(0.15)
+        current[i] = 90  # 元に戻す
+        pkt = build_set_all(current, seq)
+        ser.write(pkt)
+        seq += 1
+        time.sleep(0.1)
+
+    # ── 例4: テキスト通信と同様の単一サーボ制御 ───────────
+    print("\n=== 例4: 単一サーボ制御（SET_SERVO, cmd=0x01） ===")
+    for servo_id, angle in [(0, 45), (3, 135), (7, 60)]:
+        pkt = build_set_single(servo_id, angle, seq)
+        ser.write(pkt)
+        print(f"  seq={seq}: servo[{servo_id}]={angle}")
+        seq += 1
+        time.sleep(INTERVAL)
+
+    # ── 最後に全サーボをリセット ───────────────────────────
+    print("\n=== 全サーボリセット（90度） ===")
+    ser.write(build_reset(seq))
+    print("  リセット送信完了")
+
+finally:
+    ser.close()
+    print("\n接続を閉じました")
+```
+
+### PowerShellによる SET_ALL 送信例
+
+PowerShell 5.1 以降であれば `struct.pack` 相当の処理が可能です。
+
+```powershell
+function Build-SetAll {
+    param([int[]]$Positions, [int]$Seq = 1)
+
+    function CRC16-CCITT([byte[]]$data) {
+        $crc = 0xFFFF
+        foreach ($b in $data) {
+            $crc = $crc -bxor ($b -shl 8)
+            for ($j = 0; $j -lt 8; $j++) {
+                if ($crc -band 0x8000) { $crc = (($crc -shl 1) -bxor 0x1021) -band 0xFFFF }
+                else                  { $crc = ($crc -shl 1) -band 0xFFFF }
+            }
+        }
+        return $crc
+    }
+
+    $header = [byte[]](0xAA, 0x55, 0x01, 0x02,
+                       ($Seq -band 0xFF), (($Seq -shr 8) -band 0xFF),
+                       17, 0)            # LEN=17, リトルエンディアン
+
+    $payload = [byte[]](0x02)            # CMD=SET_ALL
+    foreach ($p in $Positions) {
+        $p = [Math]::Max(0, [Math]::Min(180, $p))
+        $payload += [byte]($p -band 0xFF)
+        $payload += [byte](($p -shr 8) -band 0xFF)
+    }
+
+    $crcData = $header[2..($header.Length-1)] + $payload
+    $crc = CRC16-CCITT $crcData
+    $crcBytes = [byte[]](($crc -band 0xFF), (($crc -shr 8) -band 0xFF))
+
+    return $header + $payload + $crcBytes + [byte[]](0x7E)
+}
+
+$port = New-Object System.IO.Ports.SerialPort COM5,921600,None,8,one
+$port.Handshake = [System.IO.Ports.Handshake]::None
+$port.Open()
+
+# 全8本を異なる角度に設定
+$pkt = Build-SetAll -Positions @(45, 135, 60, 120, 90, 90, 30, 150) -Seq 1
+$port.Write($pkt, 0, $pkt.Length)
+Write-Host "送信: $($pkt | ForEach-Object { '{0:X2}' -f $_ }) -join ' ')"
+Start-Sleep -Milliseconds 100
+
+# 全サーボを中立（90度）に戻す
+$pkt = Build-SetAll -Positions @(90,90,90,90,90,90,90,90) -Seq 2
+$port.Write($pkt, 0, $pkt.Length)
+
+$port.Close()
+```
+
+### サーボ値の目安
+
+| 値 | 意味 |
+|----|------|
+| `0`  | 最大左（または最小角） |
+| `90` | 中立（デフォルト） |
+| `180`| 最大右（または最大角） |
+
+- 有効範囲: **0〜180**（範囲外は自動クランプ）
+- ID: **0〜7**（8本）
+- SET_ALL は全8本を同時更新、SET_SERVO は1本のみ変更してそのほかは保持
+
+---
+
+最終更新: 2026-04-07
