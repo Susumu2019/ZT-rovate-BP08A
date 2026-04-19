@@ -25,6 +25,7 @@
 - `src/` : メインソースコード（アプリ・UI・システム・タイマー等）
 - `lib/` : 外部ライブラリ（例: MPU6886_AHRS）
 - `include/` : ヘッダファイル
+- `datasheet/` : ハードウェア資料（ピンアサイン・各部名称）
 - `tools/pc_client/` : PC用クライアント（Python）
 - `docs/` : ドキュメント
 
@@ -608,7 +609,7 @@ MIT License
 
 ## 作者
 
-zeatec
+Susumu Hirai
 
 ---
 
@@ -653,6 +654,10 @@ zeatec
 
 <div align="center">
     <img src="datasheet/M5CoreS3-SE_ピンアサイン.jpg" alt="M5CoreS3-SE ピンアサイン" width="60%" style="max-width:400px; min-width:200px;">
+</div>
+
+<div align="center">
+    <img src="datasheet/各部名称.png" alt="M5CoreS3-SE 各部名称" width="60%" style="max-width:400px; min-width:200px;">
 </div>
 
 ### I2C回路構成（接続デバイス一覧）
