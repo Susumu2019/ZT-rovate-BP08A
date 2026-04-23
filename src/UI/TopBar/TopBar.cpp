@@ -91,10 +91,10 @@ void TopBar::draw(M5Canvas& canvas) {
     canvas.fillCircle(serialX, serialY, 3, serialColor);
     canvas.drawString("S", serialX - 10, serialY);
     
-    // 右側: バッテリー残量を表示
-    int battery_level = M5.Power.getBatteryLevel();
-    sprintf(setLabel, "%d%%", battery_level);
-    canvas.drawString(setLabel, 270, height_/2);
+    // 右側: バッテリー残量を表示（無効化中）
+    // int battery_level = M5.Power.getBatteryLevel();
+    // sprintf(setLabel, "%d%%", battery_level);
+    // canvas.drawString(setLabel, 270, height_/2);
     
     // 右側: ライフカウンター（アニメーション文字）を表示
     sprintf(setLabel, "%c", life_char_[publicTimer.getLifeCounter()]); 

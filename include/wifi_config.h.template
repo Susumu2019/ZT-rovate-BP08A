@@ -1,0 +1,13 @@
+#ifndef WIFI_CONFIG_H
+#define WIFI_CONFIG_H
+
+// ⚠️ WiFi (STA) 接続情報 - 下記を自分のネットワークに置き換えてください
+//    このファイルは wifi_config.h.template です。以下の手順で使用します：
+//    1. このファイルを wifi_config.h にコピーする
+//    2. YOUR_WIFI_SSID と YOUR_WIFI_PASSWORD を自分の設定に置き換える
+//    3. wifi_config.h は .gitignore で除外されているため、GitHub に公開されません
+
+constexpr const char* WIFI_SSID = "YOUR_WIFI_SSID";         // ← WiFiのSSID名に置き換え
+constexpr const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD"; // ← WiFiのパスワードに置き換え
+
+#endif // WIFI_CONFIG_H

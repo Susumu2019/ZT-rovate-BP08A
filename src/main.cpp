@@ -132,18 +132,18 @@ void processUdpServoPacket(const uint8_t* data, size_t len) {
  * @param serialOk シリアル送信成功
  */
 void updateLedPattern(bool udpOk, bool serialOk) {
-	// バッテリー残量取得（0-100）
-	int battery_level = M5.Power.getBatteryLevel();
+	// バッテリー残量連動は無効化中（常時白）
+	// int battery_level = M5.Power.getBatteryLevel();
 	CRGB batteryColor = CRGB::White;
-	if (battery_level < 30) {
-		batteryColor = CRGB::Red;
-	} else if (battery_level < 40) {
-		batteryColor = CRGB(255, 140, 0); // オレンジ
-	} else if (battery_level < 60) {
-		batteryColor = CRGB::Yellow;
-	} else {
-		batteryColor = CRGB::White;
-	}
+	// if (battery_level < 30) {
+	// 	batteryColor = CRGB::Red;
+	// } else if (battery_level < 40) {
+	// 	batteryColor = CRGB(255, 140, 0); // オレンジ
+	// } else if (battery_level < 60) {
+	// 	batteryColor = CRGB::Yellow;
+	// } else {
+	// 	batteryColor = CRGB::White;
+	// }
 
 	for (int i = 0; i < WS2812_COUNT; i++) {
 		if (i == 0) {
@@ -235,8 +235,8 @@ void setup() {
 	
 
 	// rovateロゴの表示（3秒間）
-	M5.Lcd.fillScreen(WHITE);
 	if (sdReady) {
+		M5.Lcd.fillScreen(WHITE);
 		const int logoX = (LCD_WIDTH - LOGO_WIDTH) / 2;
 		const int logoY = (LCD_HEIGHT - LOGO_HEIGHT) / 2;
 		File logo = SD.open("/rovate_240_240.bmp", FILE_READ);
@@ -245,9 +245,16 @@ void setup() {
 			logo.close();
 		}
 	} else {
-		M5.Lcd.setTextColor(WHITE, BLACK);
+		M5.Lcd.fillScreen(BLACK);
+		M5.Lcd.setTextColor(WHITE, BLACK);//
 		M5.Lcd.setTextDatum(MC_DATUM);
-		M5.Lcd.drawString("SD NG", LCD_WIDTH / 2, LCD_HEIGHT / 2);
+		M5.Lcd.setFont(&fonts::Font4);//
+		M5.Lcd.setTextSize(1);
+		M5.Lcd.drawString(series_name, LCD_WIDTH / 2, LCD_HEIGHT / 2 - 50);
+		M5.Lcd.setTextSize(1);
+		M5.Lcd.drawString(device_name, LCD_WIDTH / 2, LCD_HEIGHT / 2);
+		M5.Lcd.setTextSize(1);
+		M5.Lcd.drawString(ver, LCD_WIDTH / 2, LCD_HEIGHT / 2 + 50);
 	}
 
 	// WiFi/UDP初期化（ロゴ表示中に実施）
@@ -264,6 +271,7 @@ void setup() {
 	}
 
 	// IMU6886初期化
+	M5.Lcd.setFont(&fonts::Font2);//
 	int imu_init_result = imu6886_ahrs.begin(&Wire, 0x68, 100.0f, 0.1f);	
 	if (imu_init_result == 0) {
 		imu6886_connected = true;
